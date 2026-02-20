@@ -1,0 +1,176 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String          @id @default(cuid())
+  name           String?
+  nickname       String?
+  email          String?         @unique
+  password       String?
+  image          String?
+  role           Role            @default(TEACHER)
+  specialization String?
+  
+  qrCodeId       String?         @unique @default(uuid())
+  homebaseId     String?
+  accounts       Account[]
+  teachingLogs   AttendanceLog[] @relation("TeacherLogs")
+  sessions       Session[]
+  homebase       Location?       @relation(fields: [homebaseId], references: [id])
+  teacherAttendances TeacherAttendance[]
+}
+
+model Location {
+  id       String    @id @default(cuid())
+  name     String
+  address  String?
+  rooms    Room[]
+  latitude  Float?
+  longitude Float?
+  radius    Int      @default(1000)
+  students Student[]
+  users    User[]
+}
+
+model Room {
+  id         String   @id @default(cuid())
+  name       String
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id])
+}
+
+model Student {
+  id            String          @id @default(cuid())
+  fullName      String
+  nickname      String
+  parentContact String?
+  qrCodeId      String          @unique @default(uuid())
+  packageType   String?
+  remainingSesi Int             @default(0)
+  locationId    String
+  attendances   AttendanceLog[]
+  location      Location        @relation(fields: [locationId], references: [id])
+}
+
+// Tambahan Tabel Subject agar dinamis (Bisa diatur di Dashboard Admin)
+model Subject {
+  id           String          @id @default(cuid())
+  name         String          @unique // Contoh: Matematika, English
+  attendances  AttendanceLog[]
+}
+
+// Tambahan Tabel StudentSession agar waktu sesi tidak manual ketik
+model StudentSession {
+  id          String          @id @default(cuid())
+  name        String          // Contoh: Sesi 1, Sesi Pagi
+  startTime   String          // Contoh: "08:00"
+  endTime     String          // Contoh: "10:00"
+  attendances AttendanceLog[]
+}
+
+model AttendanceLog {
+  id            String           @id @default(cuid())
+  date          DateTime         @default(now())
+  status        AttendanceStatus
+  processStatus  ProcessStatus    @default(LISTED)
+  // Scoring & Materi
+  score         String?          // A, A-, B+, dll
+  materi        String?
+  evaluation    String?
+  
+  // Relasi Siswa & Guru
+  studentId     String
+  teacherId     String
+  student       Student          @relation(fields: [studentId], references: [id])
+  teacher       User             @relation("TeacherLogs", fields: [teacherId], references: [id])
+
+  // Relasi ke Subject & Session baru
+  subjectId     String?
+  subject       Subject?         @relation(fields: [subjectId], references: [id])
+  sessionId     String?
+  session       StudentSession?  @relation(fields: [sessionId], references: [id])
+
+  // Logika Reschedule
+  isRescheduled Boolean          @default(false)
+  rescheduleDate DateTime?       // Diisi jika status IZIN/SAKIT
+  
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model TeacherAttendance {
+  id        String   @id @default(cuid())
+  teacherId String
+  teacher   User     @relation(fields: [teacherId], references: [id])
+  
+  date      DateTime @default(now())
+  checkIn   DateTime @default(now())
+  checkOut  DateTime?
+  type      AttendanceType @default(HADIR)
+  status    String   // "ON_TIME", "LATE", "LEAVE"
+  location  String?  // Nama lokasi atau koordinat
+  notes     String?        // Untuk alasan izin/sakit
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([teacherId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum Role {
+  ADMIN
+  MANAGEMENT
+  TEACHER
+}
+
+enum AttendanceStatus {
+  HADIR
+  IZIN
+  SAKIT
+  ALPA
+  
+}
+enum ProcessStatus {
+  LISTED
+  SCHEDULED
+  DONE
+}
+
+enum AttendanceType {
+  HADIR
+  IZIN
+  SAKIT
+  CUTI
+}
