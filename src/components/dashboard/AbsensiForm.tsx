@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { X, Plus, Check, MapPin, Trash2, CalendarDays, Loader2 } from "lucide-react";
 import { saveAttendanceAction } from "@/app/actions/attendance";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 
 interface AbsensiFormProps {
   onClose: () => void;
@@ -54,8 +55,9 @@ export default function AbsensiForm({
   };
 
   const addRow = () => {
+    const newId = crypto.randomUUID();
     setRows([...rows, {
-      id: (Date.now() + Math.random()).toString(),
+      id: newId,
       studentId: "",
       subjectId: "",
       sessionId: "",
@@ -66,6 +68,10 @@ export default function AbsensiForm({
       rescheduleDate: "",
       materi: "",
     }]);
+    setTimeout(() => {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  }, 100);
+    
   };
 
   const removeRow = (id: string) => {
@@ -98,6 +104,22 @@ export default function AbsensiForm({
   return (
     <div className="fixed inset-0 z-[120] bg-white flex flex-col h-screen font-sans text-slate-900 animate-in slide-in-from-bottom duration-300">
       {/* Header - Compact & High Contrast */}
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose} // Klik luar untuk tutup
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+      />
+
+      {/* 2. KONTEN MODAL: Animasi Slide Up */}
+      <motion.div 
+        initial={{ y: "100%" }} // Mulai dari bawah layar
+        animate={{ y: 0 }}      // Naik ke posisi normal
+        exit={{ y: "100%" }}    // Turun lagi saat ditutup
+        transition={{ type: "spring", damping: 25, stiffness: 200 }} // Efek pegas yang smooth
+        className="relative bg-white flex flex-col h-[100vh] w-full max-w-lg sm:h-auto sm:rounded-2xl font-sans text-slate-900 shadow-2xl overflow-hidden"
+      >
       <header className="px-4 py-3 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-cyan-50 backdrop-blur-sm z-30">
         <div className="flex flex-col">
           <h2 className="text-[11px] font-bold uppercase tracking-tight text-slate-800">Input Absensi Siswa</h2>
@@ -236,12 +258,13 @@ export default function AbsensiForm({
           onClick={handleSave} 
           disabled={isSubmitting} 
           className={`flex-[2.5] py-3.5 rounded-lg font-black text-[9px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all ${
-            isSubmitting ? "bg-slate-100 text-slate-400" : "bg-cyan-600 text-white shadow-lg shadow-cyan-100 active:scale-95"
+            isSubmitting ? "bg-slate-100 text-slate-400" : "bg-fuchsia-500 text-white shadow-lg shadow-cyan-100 active:scale-95"
           }`}
         >
           {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : <><Check size={14} /> Simpan</>}
         </button>
       </footer>
+      </motion.div>
     </div>
   );
 }

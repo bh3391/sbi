@@ -50,8 +50,15 @@ model Student {
   fullName      String
   nickname      String
   parentContact String?
+  parentName    String?          // Kolom Baru
+  
+  imageProfile  String?
+  status        StudentStatus   @default(NEWSTUDENT)
   qrCodeId      String          @unique @default(uuid())
-  packageType   String?
+  packageId     String?         // Ubah dari packageType ke Relasi ID
+  package       Package?        @relation(fields: [packageId], references: [id])
+  subjectId     String?         // Ubah dari packageType ke Relasi ID
+  subject       Subject?        @relation(fields: [subjectId], references: [id])
   remainingSesi Int             @default(0)
   locationId    String
   attendances   AttendanceLog[]
@@ -62,6 +69,7 @@ model Student {
 model Subject {
   id           String          @id @default(cuid())
   name         String          @unique // Contoh: Matematika, English
+  students     Student[]
   attendances  AttendanceLog[]
 }
 
@@ -149,6 +157,15 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model Package {
+  id          String    @id @default(cuid())
+  name        String    // Contoh: "Paket 12 Sesi"
+  price       Float
+  description Json      // Menyimpan list keuntungan paket dalam format JSON
+  sesiCredit  Int       // Jumlah sesi yang didapat (misal: 12)
+  students    Student[] // Relasi ke siswa yang mengambil paket ini
+}
+
 enum Role {
   ADMIN
   MANAGEMENT
@@ -173,4 +190,10 @@ enum AttendanceType {
   IZIN
   SAKIT
   CUTI
+}
+enum StudentStatus {
+  NEWSTUDENT
+  ACTIVE
+  INACTIVE
+  SUSPEND
 }

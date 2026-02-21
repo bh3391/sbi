@@ -2,7 +2,7 @@ import { NextAuthConfig } from "next-auth";
 
 export const authConfig = {
   pages: {
-    signIn: "/login",
+    signIn: "/entrance-guru",
   },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
@@ -13,7 +13,7 @@ export const authConfig = {
         if (isLoggedIn) return true;
         return false; 
       }
-      if (isLoggedIn && nextUrl.pathname.startsWith("/login")) {
+      if (isLoggedIn && nextUrl.pathname.startsWith("/entrance-guru")) {
         return Response.redirect(new URL("/guru", nextUrl));
       }
       return true;

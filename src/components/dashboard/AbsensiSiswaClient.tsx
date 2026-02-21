@@ -11,6 +11,7 @@ import {
   UserCircle, 
   Calendar
 } from "lucide-react";
+ import { AnimatePresence } from "framer-motion";
 
 export default function AbsensiSiswaClient({ 
   teacherName, 
@@ -32,6 +33,7 @@ export default function AbsensiSiswaClient({
   const handleRowClick = async (student: any) => {
     setSelectedStudent(student);
     setIsLoadingLogs(true);
+    setShowLogModal(true);
     try {
       const res = await getStudentLogs(student.id) as any;
       if (res?.success) {
@@ -192,6 +194,7 @@ export default function AbsensiSiswaClient({
       </button>
 
       {/* 5. MODALS */}
+      <AnimatePresence>
       {showAbsensiForm && (
         <AbsensiForm 
           onClose={() => setShowAbsensiForm(false)}
@@ -200,8 +203,13 @@ export default function AbsensiSiswaClient({
           dataSiswa={initialStudents}
           dataSubject={initialSubjects}
           dataSession={initialSessions}
-        />
-      )}
+        />)}
+        </AnimatePresence>
+       
+
+
+
+      
 
       {showLogModal && (
         <StudentLogModal 

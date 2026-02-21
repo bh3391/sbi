@@ -41,10 +41,17 @@ export default async function GuruDashboard() {
       color: "from-violet-500 to-purple-600",
       link: `${homeLink}/sesi`
     },
+    {
+          title: "Data Siswa",
+          desc: "List siswa",
+          icon: <Users size={20} strokeWidth={2.5} />,
+          color: "from-rose-500 to-pink-600",
+          link: `${homeLink}/data-siswa`
+        },
   ];
 
   return (
-    <div className="space-y-6 px-1">
+    <div className="space-y-6 min-h-screen bg-cyan-50 px-1">
       {/* Header Section - Micro Typography */}
       <DashboardHeader title="Beranda" />
       
@@ -68,7 +75,7 @@ export default async function GuruDashboard() {
           <Link
             href={menu.link}
             key={i}
-            className="group relative flex flex-col p-4 bg-white border border-slate-100 rounded-2xl shadow-sm hover:border-cyan-200 transition-all active:scale-95 overflow-hidden"
+            className="group relative flex flex-col p-4 bg-white bg-gradient-to-br from-cyan-100 via-white to-fuchsia-100 border border-slate-100 rounded-2xl shadow-sm hover:border-cyan-200 transition-all active:scale-95 overflow-hidden"
           >
             {/* Soft Background Gradient Decor */}
             <div className={`absolute -right-2 -top-2 h-12 w-12 bg-gradient-to-br ${menu.color} opacity-[0.03] rounded-full blur-lg group-hover:opacity-10 transition-opacity`} />

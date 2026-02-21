@@ -1,6 +1,6 @@
 import React from "react";
 import { auth, signOut } from "@/lib/auth";
-import { Home, User, LogOut, QrCode } from "lucide-react";
+import { Home, User, LogOut, QrCode, Fingerprint } from "lucide-react";
 import Link from "next/link";
 
 export default async function BottomNav() {
@@ -22,19 +22,19 @@ export default async function BottomNav() {
       </Link>
 
       {/* Tombol Scan */}
-      <Link href={`${homeLink}/absensi`} className="flex flex-col items-center gap-0.5 group">
+      <Link href={`${homeLink}/profile`} className="flex flex-col items-center gap-0.5 group">
         <div className="p-2 rounded-xl text-slate-400 group-hover:bg-slate-50 group-active:scale-90 transition-all">
           <QrCode size={18} strokeWidth={2.5} />
         </div>
-        <span className="text-[7px] font-black uppercase tracking-[0.15em] text-slate-500">Scan</span>
+        <span className="text-[7px] font-black uppercase tracking-[0.15em] text-slate-500">QR Profile</span>
       </Link>
 
       {/* Tombol Profil */}
-      <Link href={`${homeLink}/profile`} className="flex flex-col items-center gap-0.5 group">
+      <Link href={`${homeLink}/absensi`} className="flex flex-col items-center gap-0.5 group">
         <div className="p-2 rounded-xl text-slate-400 group-hover:bg-slate-50 group-active:scale-90 transition-all">
-          <User size={18} strokeWidth={2.5} />
+          <Fingerprint size={18} strokeWidth={2.5} />
         </div>
-        <span className="text-[7px] font-black uppercase tracking-[0.15em] text-slate-500">Profil</span>
+        <span className="text-[7px] font-black uppercase tracking-[0.15em] text-slate-500">Absen</span>
       </Link>
 
       {/* Divider Vertical Kecil */}
@@ -44,7 +44,7 @@ export default async function BottomNav() {
       <form
         action={async () => {
           "use server";
-          await signOut({ redirectTo: "/login" });
+          await signOut({ redirectTo: "/" });
         }}
       >
         <button type="submit" className="flex flex-col items-center gap-0.5 group">
