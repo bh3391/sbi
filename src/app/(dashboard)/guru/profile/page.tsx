@@ -8,7 +8,7 @@ export default async function ProfilePage() {
   const session = await auth();
   const user = await prisma.user.findUnique({
     where: { id: session?.user?.id },
-    select: { name: true, qrCodeId: true }
+    select: { name: true, qrCodeId: true, email: true, id: true }
   });
 
   if (!user || !user.qrCodeId) return <div>Data tidak tersedia</div>;
@@ -16,10 +16,12 @@ export default async function ProfilePage() {
   return (
     <section className="bg-cyan-50 min-h-screen">
         <Header title="QR Kode" />
-    <div className="p-1 items-center mt-10 justify-center max-w-md mx-auto">
+    <div className="p-1 items-center  justify-center max-w-md mx-auto">
       <GeneratorQR user={{
     name: user.name ?? "Tanpa Nama", 
-    qrCodeId: user.qrCodeId ?? "" 
+    qrCodeId: user.qrCodeId ?? "" ,
+    email: user.email ?? "",
+    id: user.id ?? ""
   }} />
     </div>
     </section>
