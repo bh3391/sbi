@@ -1,3 +1,4 @@
+// src/auth.ts
 import NextAuth from "next-auth";
 import { authConfig } from "./auth.config";
 import Credentials from "next-auth/providers/credentials";
@@ -9,6 +10,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
+  secret: process.env.AUTH_SECRET,
   providers: [
     Credentials({
       async authorize(credentials) {
@@ -18,20 +20,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { email: credentials.email as string },
         });
 
+        // Pastikan user ada dan password cocok
         if (!user || !user.password) return null;
-
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password as string,
-          user.password
-        );
-
+        const isPasswordValid = await bcrypt.compare(credentials.password as string, user.password);
         if (!isPasswordValid) return null;
 
+        // PENTING: Kembalikan object ini agar ditangkap oleh callback jwt
         return {
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role,
+          role: user.role, // Pastikan field ini ada di DB
         };
       },
     }),
@@ -39,19 +38,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.role = user.role;
-        token.id = user.id;
+        token.id = user.id ?? "";
+        token.role = (user as any).role; // Mengambil dari return authorize di atas
       }
       return token;
     },
     async session({ session, token }) {
       if (token && session.user) {
-        session.user.role = token.role as string;
-        session.user.id = token.id as string;
+        (session.user as any).id = token.id;
+        (session.user as any).role = token.role;
       }
       return session;
     },
-    // Kita panggil ulang authorized dari authConfig agar sinkron
-    ...authConfig.callbacks,
+    // Hubungkan authorized dari config
+    authorized: authConfig.callbacks?.authorized,
   },
 });

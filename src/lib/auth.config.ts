@@ -6,18 +6,42 @@ export const authConfig = {
   },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
-      const isLoggedIn = !!auth?.user;
-      const isOnDashboard = nextUrl.pathname.startsWith("/guru") || nextUrl.pathname.startsWith("/admin");
-      
-      if (isOnDashboard) {
-        if (isLoggedIn) return true;
-        return false; 
+      return true; // Biarkan semua akses dulu, nanti kita handle di middleware.ts
+      const user = auth?.user as any;
+      const isLoggedIn = !!user;
+      const { pathname } = nextUrl;
+
+      // Normalisasi role
+      const role = user?.role?.toString().toUpperCase().trim();
+
+      const isGuruRoute = pathname.startsWith("/guru");
+      const isAdminRoute = pathname.startsWith("/admin");
+
+      // Logika Proteksi
+      if (isGuruRoute || isAdminRoute) {
+        if (!isLoggedIn) return false;
+
+        // JIKA ROLE UNDEFINED: Jangan dilempar dulu! 
+        // Biarkan masuk ke halaman agar session stabil.
+        if (!role) return true; 
+
+        if (isAdminRoute && role !== "ADMIN") {
+          return Response.redirect(new URL("/", nextUrl));
+        }
+        
+        if (isGuruRoute && (role !== "TEACHER" && role !== "GURU" && role !== "ADMIN")) {
+          return Response.redirect(new URL("/", nextUrl));
+        }
+        return true;
       }
-      if (isLoggedIn && nextUrl.pathname.startsWith("/entrance-guru")) {
-        return Response.redirect(new URL("/guru", nextUrl));
+
+      if (isLoggedIn && pathname === "/entrance-guru") {
+        const target = role === "ADMIN" ? "/admin" : "/guru";
+        return Response.redirect(new URL(target, nextUrl));
       }
+
       return true;
     },
   },
-  providers: [], // Kosongkan dulu, akan diisi di file auth.ts
+  providers: [],
 } satisfies NextAuthConfig;
