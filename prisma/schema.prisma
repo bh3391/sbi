@@ -63,6 +63,7 @@ model Student {
   locationId    String
   attendances   AttendanceLog[]
   location      Location        @relation(fields: [locationId], references: [id])
+  payments      Payment[]
 }
 
 // Tambahan Tabel Subject agar dinamis (Bisa diatur di Dashboard Admin)
@@ -149,6 +150,36 @@ model TeacherAttendance {
   @@index([teacherId])
 }
 
+model Payment {
+  id          String        @id @default(cuid())
+  
+  // Relasi ke Siswa
+  studentId   String
+  student     Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  // Detail Pembayaran
+  amount      Float         // Nilai tagihan
+  date        DateTime      @default(now())
+  
+  month       Int?          // 1-12 (Untuk filter laporan bulanan)
+  year        Int?          // 2026, dsb.
+  
+  // Status & Identifikasi
+  status      PaymentStatus @default(PENDING)
+  category    String?       @default("REGISTRATION") // REGISTRATION, TUITION, dsb.
+  notes       String?       // Akan diisi "NEWSTUDENT" otomatis dari Server Action
+  
+  // Audit Trail (Tanpa Proof Image)
+  method      String?       // Transfer, Cash, atau VA
+  verifiedAt  DateTime?     // Kapan admin menekan tombol "Confirm"
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([studentId])
+  @@index([status])
+}
+
 model Session {
   id           String   @id @default(cuid())
   sessionToken String   @unique
@@ -196,4 +227,10 @@ enum StudentStatus {
   ACTIVE
   INACTIVE
   SUSPEND
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
 }

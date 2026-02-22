@@ -1,6 +1,7 @@
 "use server";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { sendFonneNotification } from "@/lib/fonnte";
 
 export async function getAllStudents() {
   try {
@@ -34,44 +35,144 @@ export async function getAllStudents() {
 
 export async function createStudent(formData: any) {
   try {
-    // 1. Ambil data kredit sesi dari package yang dipilih
-    let initialSesi = 0;
-    if (formData.packageId) {
-      const pkg = await prisma.package.findUnique({
-        where: { id: formData.packageId }
-      });
-      initialSesi = pkg?.sesiCredit || 0;
-    }
+    // 1. Ambil data referensi paket terlebih dahulu
+    const pkg = await prisma.package.findUnique({
+      where: { id: formData.packageId }
+    });
+    
+    if (!pkg) throw new Error("Paket tidak ditemukan");
 
-    // 2. Simpan ke database
-    await prisma.student.create({
-    data: {
-      fullName: formData.fullName,
-      nickname: formData.nickname,
-      parentName: formData.parentName, // Tambahan
-      parentContact: formData.parentContact,
-      locationId: formData.locationId,
-      packageId: formData.packageId,
-      subjectId: formData.subjectId,
-      status: formData.status || "ACTIVE", // Default Active
-      remainingSesi: initialSesi,
-      imageProfile: formData.imageProfileUrl || null, // Sesuaikan dengan storage kamu
-    },
-  });
+    // 2. Gunakan TRANSACTION untuk Database
+    // Jika ada error di dalam sini, Student dan Payment TIDAK AKAN tersimpan
+    const transactionResult = await prisma.$transaction(async (tx) => {
+      const student = await tx.student.create({
+        data: {
+          fullName: formData.fullName,
+          nickname: formData.nickname,
+          parentName: formData.parentName,
+          parentContact: formData.parentContact,
+          locationId: formData.locationId,
+          packageId: formData.packageId,
+          subjectId: formData.subjectId,
+          status: "NEWSTUDENT",
+          remainingSesi: pkg.sesiCredit,
+        },
+      });
+
+      await tx.payment.create({
+        data: {
+          studentId: student.id,
+          amount: pkg.price,
+          status: "PENDING",
+          category: "REGISTRATION",
+          notes: "NEWSTUDENT",
+        }
+      });
+
+      return student;
+    });
+
+    // 3. KIRIM WA HANYA JIKA TRANSACTION DI ATAS BERHASIL
+    // Taruh di luar block try jika ingin memastikan database aman dulu
+    if (transactionResult) {
+      // 1. Pengaturan Data Bank (Sesuaikan dengan rekening kamu)
+      const bankInfo = {
+        nama: "BCA",
+        nomor: "1234567890",
+        pemilik: "ADMIN BIMBEL CERDAS"
+      };
+
+      // 2. Notifikasi WhatsApp ke ADMIN
+      const adminMsg = 
+        `*🔔 PENDAFTARAN SISWA BARU*\n\n` +
+        `Telah masuk pendaftaran baru:\n` +
+        `• *Nama:* ${transactionResult.fullName}\n` +
+        `• *Ortu:* ${transactionResult.parentName}\n` +
+        `• *Paket:* ${pkg.name}\n` +
+        `• *Tagihan:* Rp ${pkg.price.toLocaleString('id-ID')}\n\n` +
+        `Silakan cek dashboard untuk verifikasi pembayaran.`;
+
+      await sendFonneNotification(
+        process.env.ADMIN_PHONE_NUMBER || "6289670431969",
+        adminMsg
+      );
+
+      // 3. Notifikasi WhatsApp ke ORANG TUA
+      if (transactionResult.parentContact) {
+        const parentMsg = 
+          `Halo Ayah/Bunda *${transactionResult.parentName}*,\n\n` +
+          `Pendaftaran Ananda *${transactionResult.fullName}* telah kami terima. ✨\n\n` +
+          `*DETAIL TAGIHAN:*\n` +
+          `--------------------------------\n` +
+          `• Paket: ${pkg.name}\n` +
+          `• Total Tagihan: *Rp ${pkg.price.toLocaleString('id-ID')}*\n` +
+          `--------------------------------\n\n` +
+          `*INSTRUKSI PEMBAYARAN:*\n` +
+          `Mohon selesaikan transfer ke rekening berikut:\n\n` +
+          `🏦 *Bank ${bankInfo.nama}*\n` +
+          `💳 No. Rek: *${bankInfo.nomor}*\n` +
+          `👤 A/N: *${bankInfo.pemilik}*\n\n` +
+          `Setelah transfer, silakan kirimkan *Bukti Bayar* dengan membalas pesan ini untuk aktivasi sesi belajar Ananda.\n\n` +
+          `Terima kasih! 🙏`;
+
+        await sendFonneNotification(
+          transactionResult.parentContact,
+          parentMsg
+        );
+      }
+    }
 
     revalidatePath("/admin/data-siswa");
     return { success: true };
+
   } catch (error) {
-    console.error(error);
-    return { success: false, message: "Gagal mendaftarkan siswa" };
+    // Jika ada error di langkah mana pun, kode di bawah ini yang jalan
+    console.error("Critical Error during registration:", error);
+    return { 
+      success: false, 
+      message: error instanceof Error ? error.message : "Gagal mendaftarkan siswa" 
+    };
   }
 }
-export async function getFormDataReferences() {
-  const [locations, packages, subjects] = await Promise.all([
-    prisma.location.findMany({ select: { id: true, name: true } }),
-    prisma.package.findMany({ select: { id: true, name: true, sesiCredit: true } }),
-    prisma.subject.findMany({ select: { id: true, name: true } }),
-  ]);
 
-  return { locations, packages, subjects };
+export async function getFormDataReferences() {
+  try {
+    const [locations, packages, subjects] = await Promise.all([
+      // Mengambil lokasi belajar
+      prisma.location.findMany({ 
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' }
+      }),
+      // Mengambil paket (Penting: Sertakan price dan sesiCredit untuk kalkulasi Payment)
+      prisma.package.findMany({ 
+        select: { 
+          id: true, 
+          name: true, 
+          sesiCredit: true,
+          price: true // Dibutuhkan untuk mengisi amount di tabel Payment
+        },
+        orderBy: { sesiCredit: 'asc' }
+      }),
+      // Mengambil mata pelajaran
+      prisma.subject.findMany({ 
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' }
+      }),
+    ]);
+
+    return { 
+      locations, 
+      packages, 
+      subjects,
+      success: true 
+    };
+  } catch (error) {
+    console.error("Error fetching form references:", error);
+    return { 
+      locations: [], 
+      packages: [], 
+      subjects: [], 
+      success: false 
+    };
+  }
 }

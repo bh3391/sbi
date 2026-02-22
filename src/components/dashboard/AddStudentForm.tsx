@@ -70,7 +70,7 @@ export default function AddStudentForm({ onClose, locations, packages, subjects 
                     <option value="ACTIVE">ACTIVE</option>
                     <option value="INACTIVE">INACTIVE</option>
                     <option value="SUSPEND">SUSPEND</option>
-                    <option value="ACTIVE">NEWSTUDENT</option>
+                    <option value="NEWSTUDENT">NEWSTUDENT</option>
                 </select>
                 </div>
                 

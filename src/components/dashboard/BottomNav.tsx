@@ -30,7 +30,7 @@ export default async function BottomNav() {
       </Link>
 
       {/* Tombol Profil */}
-      <Link href={`${homeLink}/absensi`} className="flex flex-col items-center gap-0.5 group">
+      <Link href={`${homeLink}/scan`} className="flex flex-col items-center gap-0.5 group">
         <div className="p-2 rounded-xl text-slate-400 group-hover:bg-slate-50 group-active:scale-90 transition-all">
           <Fingerprint size={18} strokeWidth={2.5} />
         </div>

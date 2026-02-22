@@ -2,7 +2,7 @@ import React from "react";
 import { auth } from "@/lib/auth";
 import Link from "next/link";
 import DashboardHeader from "@/components/dashboard/header";
-import { Users, MapPin, Calendar, Clock, ArrowRight, HatGlasses } from "lucide-react";
+import { Users, MapPin, Calendar, Clock, ArrowRight, HatGlasses, CurrencyIcon } from "lucide-react";
 
 export default async function GuruDashboard() {
   const session = await auth();
@@ -49,6 +49,13 @@ export default async function GuruDashboard() {
       icon: <HatGlasses size={20} strokeWidth={2.5} />,
       color: "from-indigo-500 to-pink-200",
       link: "/admin/data-guru"
+    },
+    {
+      title: "Payment",
+      desc: "List Pembayaran",
+      icon: <CurrencyIcon size={20} strokeWidth={2.5} />,
+      color: "from-amber-500 to-yellow-200",
+      link: "/admin/payment"
     },
   ];
 

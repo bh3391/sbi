@@ -1,10 +1,11 @@
 "use client";
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { User, History, Search, Loader2, Plus, GraduationCap, MapPin, Mail, ShieldCheck } from "lucide-react";
+import { User, History, Search, Loader2, Plus, GraduationCap, MapPin, Mail, ShieldCheck, Pencil } from "lucide-react";
 import AddTeacherForm from "@/components/dashboard/AddTeacherForm"; 
 // Pastikan Anda membuat komponen Profile Modal khusus Guru atau sesuaikan StudentProfileModal
 import TeacherProfileModal from "@/components/dashboard/TeacherProfileModal"; 
+import EditTeacherForm from "@/components/dashboard/EditTeacherForm";
 
 export default function DataGuruClient({ 
   teachers, 
@@ -17,6 +18,8 @@ export default function DataGuruClient({
   
   // State untuk kontrol Modal
   const [showProfile, setShowProfile] = useState(false);
+  
+const [showEditForm, setShowEditForm] = useState(false);
 
   const filtered = teachers.filter((t: any) => 
     t.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -27,7 +30,7 @@ export default function DataGuruClient({
   return (
     <div className="space-y-4 mt-3  rounded-2xl border border-slate-200">
       {/* Search Bar */}
-      <div className="relative group">
+      <div className="relative group m-2">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-fuchsia-500 transition-colors" size={16} />
         <input 
           type="text" 
@@ -38,10 +41,10 @@ export default function DataGuruClient({
       </div>
 
       {/* Teacher List */}
-      <div className="grid grid-cols-1 gap-2 px-1">
+      <div className="grid grid-cols-1 gap-1 px-1">
         {filtered.length > 0 ? (
           filtered.map((teacher: any) => (
-            <div key={teacher.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between hover:border-fuchsia-200 transition-all">
+            <div key={teacher.id} className="bg-gradient-to-r from-cyan-300 to-fuchsia-100  p-1 rounded-lg border border-slate-100 shadow-sm flex items-center justify-between hover:border-fuchsia-200 transition-all">
               <div className="flex items-center gap-3">
                 {/* Avatar Section */}
                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-slate-400 overflow-hidden shadow-inner border border-slate-100">
@@ -77,11 +80,22 @@ export default function DataGuruClient({
 
               {/* Action Buttons */}
               <div className="flex gap-2">
+                {/* Tombol Lihat Profil */}
                 <button 
                   onClick={() => { setSelectedTeacher(teacher); setShowProfile(true); }}
-                  className="p-2.5 bg-slate-50 text-slate-600 rounded-xl hover:bg-fuchsia-600 hover:text-white active:scale-90 transition-all border border-slate-100 shadow-sm"
+                  className="p-2.5  text-cyan-600 rounded-xl hover:bg-cyan-500 hover:text-white active:scale-90 transition-all border border-slate-100 shadow-sm group"
+                  title="Lihat Profil"
                 >
                   <User size={18} />
+                </button>
+
+                {/* Tombol Edit Profil - BARU */}
+                <button 
+                  onClick={() => { setSelectedTeacher(teacher); setShowEditForm(true); }}
+                  className="p-2.5  text-fuchsia-400 rounded-xl hover:bg-fuchsia-600 hover:text-white active:scale-90 transition-all border border-slate-100 shadow-sm"
+                  title="Edit Data"
+                >
+                  <Pencil size={18} />
                 </button>
               </div>
             </div>
@@ -130,6 +144,16 @@ export default function DataGuruClient({
           />
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+  {showEditForm && (
+    <EditTeacherForm 
+      teacherData={selectedTeacher} 
+      locations={locations} 
+      onClose={() => setShowEditForm(false)} 
+    />
+  )}
+</AnimatePresence>
     </div>
   );
 }

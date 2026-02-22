@@ -31,8 +31,35 @@ export async function getTeacherDashboardData() {
 
   return { profile, personalAttendance, pendingTasks };
 }
+export async function getTeacherAttendanceHistory(teacherId: string) {
+  return await prisma.teacherAttendance.findMany({
+    where: { teacherId },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+export async function getAllTeacherAttendanceByDate(teacherId: string, date: Date) {
+  try {
+    const logs = await prisma.teacherAttendance.findMany({
+      where: { teacherId, /* ... filter tanggal ... */ },
+      orderBy: { createdAt: 'desc' },
+    });
 
+    // Bungkus dalam objek
+    return { 
+      success: true, 
+      data: logs // logs adalah array yang tadi menyebabkan error
+    };
+  } catch (error) {
+    return { success: false, data: [], message: "Gagal memuat data" };
+  }
+}
 
+export async function getTeacherAttendanceByStatus(teacherId: string, status: "LATE" | "ON_TIME" | "LEAVE") {
+  return await prisma.teacherAttendance.findMany({
+    where: { teacherId, status },
+    orderBy: { createdAt: 'desc' },
+  });
+}
 
 export async function handleTeacherCheckIn(scannedQrId: string, userCoords: { lat: number, lng: number }) {
   const session = await auth();
@@ -49,6 +76,22 @@ export async function handleTeacherCheckIn(scannedQrId: string, userCoords: { la
     // 2. VALIDASI QR: Cek apakah hasil scan sama dengan qrCodeId unik milik User
     if (user.qrCodeId !== scannedQrId) {
       return { success: false, message: "QR Code tidak cocok dengan akun Anda!" };
+    }
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const existingAttendance = await prisma.teacherAttendance.findFirst({
+      where: {
+        teacherId: user.id,
+        date: { gte: startOfDay, lte: endOfDay }
+      }
+    });
+
+    if (existingAttendance) {
+      return { success: false, message: "Anda sudah melakukan absensi hari ini." };
     }
 
     // 3. CARI LOKASI TERDEKAT: Ambil semua lokasi dan cari yang masuk dalam radius

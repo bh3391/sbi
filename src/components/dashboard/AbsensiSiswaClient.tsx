@@ -31,21 +31,22 @@ export default function AbsensiSiswaClient({
   const [endDate, setEndDate] = useState("");
 
   const handleRowClick = async (student: any) => {
-    setSelectedStudent(student);
-    setIsLoadingLogs(true);
-    setShowLogModal(true);
-    try {
-      const res = await getStudentLogs(student.id) as any;
-      if (res?.success) {
-        setStudentLogs(res.data);
-        setShowLogModal(true);
-      }
-    } catch (error) {
-      console.error("Error fetching logs:", error);
-    } finally {
-      setIsLoadingLogs(false);
+  setSelectedStudent(student);
+  setShowLogModal(true); // Buka modal dulu agar UX terasa cepat
+  setIsLoadingLogs(true);
+  
+  try {
+    // Gunakan parameter startDate/endDate yang ada di state
+    const res = await getStudentLogs(student.id, startDate, endDate) as any;
+    if (res?.success) {
+      setStudentLogs(res.data);
     }
-  };
+  } catch (error) {
+    console.error("Error fetching logs:", error);
+  } finally {
+    setIsLoadingLogs(false);
+  }
+};
 
   const applyDateFilter = async () => {
     if (!selectedStudent) return;
@@ -219,6 +220,7 @@ export default function AbsensiSiswaClient({
           isLoading={isLoadingLogs}
           dateRange={{ startDate, setStartDate, endDate, setEndDate }}
           onFilter={applyDateFilter}
+          refreshLogs={applyDateFilter}
         />
       )}
     </div>

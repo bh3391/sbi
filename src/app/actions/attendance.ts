@@ -93,20 +93,42 @@ export async function getStudentLogs(studentId: string, startDate?: string, endD
   }
 }
 
-export async function updateProcessStatusAction(logId: string, newStatus: string) {
+export async function updateProcessStatusAction(
+  logId: string, 
+  newStatus: string, 
+  newDate?: string // Tambahkan parameter opsional untuk tanggal baru
+) {
   try {
-    const updated = await prisma.attendanceLog.update({
-  where: { id: logId },
-  data: { 
-    processStatus: newStatus as any
-  },
-});
+    // Siapkan objek data untuk diupdate
+    const updatePayload: any = {
+      processStatus: newStatus as any,
+    };
 
-    revalidatePath("/absensi"); // Sesuaikan dengan path halaman Anda
-    return { success: true, message: `Status berhasil diubah ke ${newStatus}`, data: updated };
+    // Jika ada newDate (dari fitur Reschedule), update juga field tanggalnya
+    if (newDate) {
+      // Tambahkan jam 12:00 agar tidak terkena pergeseran timezone UTC
+      updatePayload.rescheduleDate = new Date(`${newDate}T12:00:00`);
+    }
+
+    const updated = await prisma.attendanceLog.update({
+      where: { id: logId },
+      data: updatePayload,
+    });
+
+    // Revalidasi agar UI terupdate tanpa refresh manual
+    revalidatePath("/absensi"); 
+    
+    return { 
+      success: true, 
+      message: `Status berhasil diubah ke ${newStatus}${newDate ? ' dengan tanggal baru' : ''}`, 
+      data: updated 
+    };
   } catch (error) {
     console.error("Update Status Error:", error);
-    return { success: false, message: "Gagal memperbarui status ke database." };
+    return { 
+      success: false, 
+      message: "Gagal memperbarui status ke database." 
+    };
   }
 }
 

@@ -178,6 +178,7 @@ export default function DataSiswaClient({ initialStudents,
             isLoading={isLoadingLogs}
             dateRange={{ startDate, setStartDate, endDate, setEndDate }}
             onFilter={applyDateFilter}
+            refreshLogs={applyDateFilter}
           />
         )}
       </AnimatePresence>

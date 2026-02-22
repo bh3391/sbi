@@ -115,7 +115,7 @@ const filteredAttendance = personalAttendance.filter((log) => {
   };
 
   return (
-    <div className="min-h-screen bg-transparent pb-32 font-sans">
+    <div className="h-screen bg-transparent  font-sans">
         <DashboardHeader title="Absensi "  />
       
       {/* SECTION 1: PROFILE & PRIMARY ACTION */}
@@ -409,6 +409,7 @@ const filteredAttendance = personalAttendance.filter((log) => {
           </div>
         </div>
       )}
+      <div className="h-24 bg-gradient-to-b from-cyan-100 to-fuchsia-100" /> {/* Spacer untuk scrollable content */}
     </div>
   );
 }

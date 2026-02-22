@@ -6,7 +6,7 @@ export const authConfig = {
   },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
-      return true; // Biarkan semua akses dulu, nanti kita handle di middleware.ts
+       // Biarkan semua akses dulu, nanti kita handle di middleware.ts
       const user = auth?.user as any;
       const isLoggedIn = !!user;
       const { pathname } = nextUrl;
