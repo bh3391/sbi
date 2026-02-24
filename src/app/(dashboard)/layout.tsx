@@ -2,6 +2,7 @@ import React from "react";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import BottomNav from "@/components/dashboard/BottomNav";
+import InstallPrompt from "@/components/ui/InstallPrompt";
 
 export default async function DashboardLayout({
   children,
@@ -24,6 +25,7 @@ export default async function DashboardLayout({
       {/* pb-24 memberikan ruang yang cukup untuk Floating BottomNav agar tidak menutupi konten terakhir */}
       <main className="pb-24 max-w-md mx-auto min-h-screen relative px-1 pt-2">
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+          <InstallPrompt />
           {children}
         </div>
       </main>
