@@ -2,9 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
+import Link from "next/link";
 
 export default function DashboardHeader({ title }: { title: string }) {
   const router = useRouter();
+  
 
   return (
     <div className="flex items-center justify-between bg-cyan-50 border-b border-cyan-100 p-2">
@@ -29,9 +31,9 @@ export default function DashboardHeader({ title }: { title: string }) {
       </div>
 
       {/* Avatar: Konsisten dengan font drawer */}
-      <div className="h-9 w-9 rounded-full bg-fuchsia-500 flex items-center justify-center text-[10px] font-black text-white shadow-sm ring-4 ring-slate-50">
-        BP
-      </div>
+      <Link href="/guru" className=" font-black text-white  ">
+        <img src="/logo-header.png" alt="Avatar" className="w-12 h-12 rounded-full" />
+      </Link>
     </div>
   );
 }

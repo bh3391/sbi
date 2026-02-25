@@ -10,7 +10,6 @@ export default async function AbsensiSiswaPage() {
   startOfDay.setHours(0, 0, 0, 0);
   const endOfDay = new Date();
   endOfDay.setHours(23, 59, 59, 999);
-  
 
   const [students, subjects, sessions] = await Promise.all([
     prisma.student.findMany({

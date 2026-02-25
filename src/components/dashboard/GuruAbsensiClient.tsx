@@ -18,6 +18,7 @@ import { Html5QrcodeScanner } from "html5-qrcode";
 import { handleTeacherCheckIn, handleTeacherCheckOut, handleSubmitLeave } from "@/app/actions/teacher";
 import DashboardHeader from "./header";
 import { StudentAttendanceDrawer } from "./StudentAttendanceDrawer";
+import { Toaster, toast } from "sonner";
 
 
 interface Props {
@@ -61,58 +62,92 @@ const filteredAttendance = personalAttendance.filter((log) => {
 
   // Handler Scanner
   useEffect(() => {
-    let scanner: any;
-    if (showScanner) {
-      scanner = new Html5QrcodeScanner("reader", { 
-        fps: 10, 
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0
-      }, false);
+  let scanner: any;
+  if (showScanner) {
+    scanner = new Html5QrcodeScanner("reader", { 
+      fps: 10, 
+      qrbox: { width: 250, height: 250 },
+      aspectRatio: 1.0
+    }, false);
 
-      scanner.render(async (decodedText: string) => {
-        setLoading(true);
-        
-        // Ambil Lokasi GPS sebelum kirim ke server
-        navigator.geolocation.getCurrentPosition(
-          async (position) => {
-            const coords = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
-            };
+    scanner.render(async (decodedText: string) => {
+      // 1. Hentikan scanner segera setelah QR terdeteksi agar tidak double scan
+      scanner.clear();
+      setShowScanner(false);
+      setLoading(true);
 
-            if (!isCheckedIn) {
-              const res = await handleTeacherCheckIn(decodedText, coords);
-              if (!res.success) alert(res.message);
-            } else {
-              const res = await handleTeacherCheckOut();
-              if (!res.success) alert(res.message);
-            }
-            
-            scanner.clear();
-            setShowScanner(false);
-            setLoading(false);
-          },
-          (err) => {
-            alert("Izin lokasi ditolak. Aktifkan GPS untuk absen.");
-            setLoading(false);
-          }
-        );
-      }, (err: any) => {});
-    }
-    return () => { if (scanner) scanner.clear(); };
-  }, [showScanner, isCheckedIn]);
+      // 2. Ambil Lokasi GPS
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const coords = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+
+          // 3. Gunakan toast.promise untuk feedback proses Check-In/Out
+          const attendanceAction = !isCheckedIn 
+            ? handleTeacherCheckIn(decodedText, coords) 
+            : handleTeacherCheckOut();
+
+          toast.promise(attendanceAction, {
+            loading: !isCheckedIn ? 'Sedang memproses Check-In...' : 'Sedang memproses Check-Out...',
+            success: (res: any) => {
+              if (res.success) {
+                return res.message || (!isCheckedIn ? "Berhasil Absen Masuk!" : "Berhasil Absen Pulang!");
+              } else {
+                // Lempar error jika server mengirim success: false
+                throw new Error(res.message);
+              }
+            },
+            error: (err) => err.message || "Terjadi kesalahan sistem",
+            finally: () => setLoading(false)
+          });
+        },
+        (err) => {
+          toast.error("Akses Lokasi Ditolak", {
+            description: "Izin lokasi diperlukan untuk validasi absensi."
+          });
+          setLoading(false);
+        }
+      );
+    }, (err: any) => {});
+  }
+  return () => { if (scanner) scanner.clear(); };
+}, [showScanner, isCheckedIn]);
 
   const onLeaveSubmit = async () => {
-    if (!leaveType) return;
-    setLoading(true);
-    const res = await handleSubmitLeave(leaveType as any, notes);
-    if (res.success) {
-      setShowLeaveModal(false);
-      setLeaveType("");
-      setNotes("");
-    }
-    setLoading(false);
-  };
+  // Validasi awal tetap ada agar tidak memicu toast loading jika data kosong
+  if (!leaveType) {
+    toast.warning("Pilih Alasan Izin", {
+      description: "Mohon pilih kategori izin (Sakit/Izin/Lainnya) terlebih dahulu."
+    });
+    return;
+  }
+
+  setLoading(true);
+
+  // Gunakan toast.promise untuk pengalaman UX yang lebih interaktif
+  toast.promise(handleSubmitLeave(leaveType as any, notes), {
+    loading: 'Sedang mengirim permohonan izin...',
+    success: (res: any) => {
+      if (res.success) {
+        // Reset form & tutup modal
+        setShowLeaveModal(false);
+        setLeaveType("");
+        setNotes("");
+        return "Permohonan izin berhasil dikirim ke Admin!";
+      } else {
+        throw new Error(res.message || "Gagal mengirim izin");
+      }
+    },
+    error: (err) => {
+      return err.message || "Terjadi kesalahan sistem saat mengirim izin";
+    },
+    finally: () => {
+      setLoading(false);
+    },
+  });
+};
 
   return (
     <div className="h-screen bg-transparent  font-sans">

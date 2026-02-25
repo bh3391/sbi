@@ -3,6 +3,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, Send, GraduationCap, Info, ShieldCheck,Sparkles } from "lucide-react";
 import { createStudent } from "@/app/actions/students";
+import { toast } from "sonner";
 
 export default function PendaftaranClient({ locations, packages, subjects }: any) {
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -13,17 +14,38 @@ export default function PendaftaranClient({ locations, packages, subjects }: any
   const [agreed, setAgreed] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!agreed) return alert("Silakan setujui syarat dan ketentuan.");
-    
-    setLoading(true);
-    const formData = new FormData(e.currentTarget);
-    const data = Object.fromEntries(formData.entries());
-    
-    const res = await createStudent(data);
-    if (res.success) setIsSubmitted(true);
-    setLoading(false);
-  };
+  e.preventDefault();
+
+  // 1. Validasi Persetujuan S&K
+  if (!agreed) {
+    return toast.warning("Persetujuan Dibutuhkan", {
+      description: "Silakan setujui syarat dan ketentuan untuk melanjutkan.",
+    });
+  }
+
+  setLoading(true);
+  const formData = new FormData(e.currentTarget);
+  const data = Object.fromEntries(formData.entries());
+
+  // 2. Gunakan toast.promise untuk proses pendaftaran
+  toast.promise(createStudent(data), {
+    loading: 'Sedang mendaftarkan siswa...',
+    success: (res: any) => {
+      if (res.success) {
+        setIsSubmitted(true);
+        return `Pendaftaran ${data.fullName} berhasil!`;
+      } else {
+        throw new Error(res.message || "Gagal mendaftarkan siswa");
+      }
+    },
+    error: (err) => {
+      return err.message || "Terjadi kesalahan sistem";
+    },
+    finally: () => {
+      setLoading(false);
+    },
+  });
+};
 
   if (isSubmitted) {
     return (

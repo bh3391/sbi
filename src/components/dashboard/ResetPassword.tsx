@@ -3,6 +3,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { ShieldAlert, Eye, EyeOff, Lock, X, Loader2 } from "lucide-react";
 import { updateUserPassword } from "@/app/actions/users";
+import { Toaster, toast } from "sonner";
 
 export default function ResetPasswordModal({ userId, userName, onSuccess }: any) {
   const [password, setPassword] = useState("");
@@ -12,31 +13,42 @@ export default function ResetPasswordModal({ userId, userName, onSuccess }: any)
   const [error, setError] = useState("");
 
   const handleReset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
+  e.preventDefault();
+  setError(""); // Tetap gunakan setError untuk validasi input inline jika perlu
 
-    if (password.length < 6) return setError("Minimal 6 karakter");
-    if (password !== confirmPassword) return setError("Password tidak cocok");
+  // 1. Validasi Input
+  if (password.length < 6) {
+    toast.error("Password Terlalu Pendek", { description: "Minimal harus 6 karakter." });
+    return setError("Minimal 6 karakter");
+  }
+  if (password !== confirmPassword) {
+    toast.error("Password Tidak Cocok", { description: "Pastikan konfirmasi password sama." });
+    return setError("Password tidak cocok");
+  }
 
-    const confirmAction = window.confirm(`Apakah Anda yakin ingin mengganti password untuk ${userName}?`);
-    
-    if (confirmAction) {
-      setIsLoading(true);
-      try {
-        const res = await updateUserPassword(userId, password);
-        if (res.success) {
-          
-          onSuccess(); 
-        } else {
-          setError(res.message || "Gagal memperbarui database");
-        }
-      } catch (err) {
-        setError("Terjadi kesalahan sistem");
-      } finally {
-        setIsLoading(false);
+  // 2. Gunakan toast.promise untuk eksekusi
+  // Kita hilangkan window.confirm karena tombol 'Reset' di UI sudah merupakan aksi sadar
+  setIsLoading(true);
+
+  toast.promise(updateUserPassword(userId, password), {
+    loading: `Sedang mereset password ${userName}...`,
+    success: (res: any) => {
+      if (res.success) {
+        onSuccess();
+        return `Password ${userName} berhasil diperbarui!`;
+      } else {
+        throw new Error(res.message || "Gagal memperbarui database");
       }
-    }
-  };
+    },
+    error: (err) => {
+      setError(err.message);
+      return err.message || "Terjadi kesalahan sistem";
+    },
+    finally: () => {
+      setIsLoading(false);
+    },
+  });
+};
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">

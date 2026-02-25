@@ -1,4 +1,4 @@
-// app/guru/profile/page.tsx
+exports// app/guru/profile/page.tsx
 import prisma  from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import GeneratorQR from "@/components/dashboard/GeneratorQr";

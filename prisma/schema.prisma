@@ -8,34 +8,37 @@ datasource db {
 }
 
 model User {
-  id             String          @id @default(cuid())
+  id             String  @id @default(cuid())
   name           String?
   nickname       String?
-  email          String?         @unique
+  email          String? @unique
   password       String?
   image          String?
-  role           Role            @default(TEACHER)
+  role           Role    @default(TEACHER)
   specialization String?
-  
-  qrCodeId       String?         @unique @default(uuid())
-  homebaseId     String?
-  accounts       Account[]
-  teachingLogs   AttendanceLog[] @relation("TeacherLogs")
-  sessions       Session[]
-  homebase       Location?       @relation(fields: [homebaseId], references: [id])
+
+  qrCodeId           String?             @unique @default(uuid())
+  homebaseId         String?
+  accounts           Account[]
+  teachingLogs       AttendanceLog[]     @relation("TeacherLogs")
+  sessions           Session[]
+  homebase           Location?           @relation(fields: [homebaseId], references: [id])
   teacherAttendances TeacherAttendance[]
+  inventoryLogs      InventoryLog[]
+  paymentsCreated    Payment[]           @relation("PaymentCreator")
+  paymentsVerified   Payment[]           @relation("PaymentVerifier")
 }
 
 model Location {
-  id       String    @id @default(cuid())
-  name     String
-  address  String?
-  rooms    Room[]
+  id        String    @id @default(cuid())
+  name      String
+  address   String?
+  rooms     Room[]
   latitude  Float?
   longitude Float?
-  radius    Int      @default(1000)
-  students Student[]
-  users    User[]
+  radius    Int       @default(1000)
+  students  Student[]
+  users     User[]
 }
 
 model Room {
@@ -46,18 +49,18 @@ model Room {
 }
 
 model Student {
-  id            String          @id @default(cuid())
+  id            String  @id @default(cuid())
   fullName      String
   nickname      String
   parentContact String?
-  parentName    String?          // Kolom Baru
-  
+  parentName    String? // Kolom Baru
+
   imageProfile  String?
   status        StudentStatus   @default(NEWSTUDENT)
   qrCodeId      String          @unique @default(uuid())
-  packageId     String?         // Ubah dari packageType ke Relasi ID
+  packageId     String? // Ubah dari packageType ke Relasi ID
   package       Package?        @relation(fields: [packageId], references: [id])
-  subjectId     String?         // Ubah dari packageType ke Relasi ID
+  subjectId     String? // Ubah dari packageType ke Relasi ID
   subject       Subject?        @relation(fields: [subjectId], references: [id])
   remainingSesi Int             @default(0)
   locationId    String
@@ -68,18 +71,18 @@ model Student {
 
 // Tambahan Tabel Subject agar dinamis (Bisa diatur di Dashboard Admin)
 model Subject {
-  id           String          @id @default(cuid())
-  name         String          @unique // Contoh: Matematika, English
-  students     Student[]
-  attendances  AttendanceLog[]
+  id          String          @id @default(cuid())
+  name        String          @unique // Contoh: Matematika, English
+  students    Student[]
+  attendances AttendanceLog[]
 }
 
 // Tambahan Tabel StudentSession agar waktu sesi tidak manual ketik
 model StudentSession {
   id          String          @id @default(cuid())
-  name        String          // Contoh: Sesi 1, Sesi Pagi
-  startTime   String          // Contoh: "08:00"
-  endTime     String          // Contoh: "10:00"
+  name        String // Contoh: Sesi 1, Sesi Pagi
+  startTime   String // Contoh: "08:00"
+  endTime     String // Contoh: "10:00"
   attendances AttendanceLog[]
 }
 
@@ -87,30 +90,30 @@ model AttendanceLog {
   id            String           @id @default(cuid())
   date          DateTime         @default(now())
   status        AttendanceStatus
-  processStatus  ProcessStatus    @default(LISTED)
+  processStatus ProcessStatus    @default(LISTED)
   // Scoring & Materi
-  score         String?          // A, A-, B+, dll
+  score         String? // A, A-, B+, dll
   materi        String?
   evaluation    String?
-  
+
   // Relasi Siswa & Guru
-  studentId     String
-  teacherId     String
-  student       Student          @relation(fields: [studentId], references: [id])
-  teacher       User             @relation("TeacherLogs", fields: [teacherId], references: [id])
+  studentId String
+  teacherId String
+  student   Student @relation(fields: [studentId], references: [id])
+  teacher   User    @relation("TeacherLogs", fields: [teacherId], references: [id])
 
   // Relasi ke Subject & Session baru
-  subjectId     String?
-  subject       Subject?         @relation(fields: [subjectId], references: [id])
-  sessionId     String?
-  session       StudentSession?  @relation(fields: [sessionId], references: [id])
+  subjectId String?
+  subject   Subject?        @relation(fields: [subjectId], references: [id])
+  sessionId String?
+  session   StudentSession? @relation(fields: [sessionId], references: [id])
 
   // Logika Reschedule
-  isRescheduled Boolean          @default(false)
-  rescheduleDate DateTime?       // Diisi jika status IZIN/SAKIT
-  
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  isRescheduled  Boolean   @default(false)
+  rescheduleDate DateTime? // Diisi jika status IZIN/SAKIT
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Account {
@@ -132,18 +135,18 @@ model Account {
 }
 
 model TeacherAttendance {
-  id        String   @id @default(cuid())
+  id        String @id @default(cuid())
   teacherId String
-  teacher   User     @relation(fields: [teacherId], references: [id])
-  
-  date      DateTime @default(now())
-  checkIn   DateTime @default(now())
-  checkOut  DateTime?
-  type      AttendanceType @default(HADIR)
-  status    String   // "ON_TIME", "LATE", "LEAVE"
-  location  String?  // Nama lokasi atau koordinat
-  notes     String?        // Untuk alasan izin/sakit
-  
+  teacher   User   @relation(fields: [teacherId], references: [id])
+
+  date     DateTime       @default(now())
+  checkIn  DateTime       @default(now())
+  checkOut DateTime?
+  type     AttendanceType @default(HADIR)
+  status   String // "ON_TIME", "LATE", "LEAVE"
+  location String? // Nama lokasi atau koordinat
+  notes    String? // Untuk alasan izin/sakit
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -151,30 +154,36 @@ model TeacherAttendance {
 }
 
 model Payment {
-  id          String        @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   // Relasi ke Siswa
-  studentId   String
-  student     Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
   // Detail Pembayaran
-  amount      Float         // Nilai tagihan
-  date        DateTime      @default(now())
-  
-  month       Int?          // 1-12 (Untuk filter laporan bulanan)
-  year        Int?          // 2026, dsb.
-  
+  amount Float // Nilai tagihan
+  date   DateTime @default(now())
+
+  month Int? // 1-12 (Untuk filter laporan bulanan)
+  year  Int? // 2026, dsb.
+
   // Status & Identifikasi
-  status      PaymentStatus @default(PENDING)
-  category    String?       @default("REGISTRATION") // REGISTRATION, TUITION, dsb.
-  notes       String?       // Akan diisi "NEWSTUDENT" otomatis dari Server Action
-  
+  status   PaymentStatus @default(PENDING)
+  category String?       @default("REGISTRATION") // REGISTRATION, TUITION, dsb.
+  notes    String? // Akan diisi "NEWSTUDENT" otomatis dari Server Action
+
   // Audit Trail (Tanpa Proof Image)
-  method      String?       // Transfer, Cash, atau VA
-  verifiedAt  DateTime?     // Kapan admin menekan tombol "Confirm"
-  
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  method      String? // Transfer, Cash, atau VA
+  verifiedAt  DateTime? // Kapan admin menekan tombol "Confirm"
+  createdById String?
+  createdBy   User?     @relation("PaymentCreator", fields: [createdById], references: [id])
+
+  // Admin yang memverifikasi (Confirm)
+  verifiedById String?
+  verifiedBy   User?   @relation("PaymentVerifier", fields: [verifiedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([studentId])
   @@index([status])
@@ -190,11 +199,39 @@ model Session {
 
 model Package {
   id          String    @id @default(cuid())
-  name        String    // Contoh: "Paket 12 Sesi"
+  name        String // Contoh: "Paket 12 Sesi"
   price       Float
-  description Json      // Menyimpan list keuntungan paket dalam format JSON
-  sesiCredit  Int       // Jumlah sesi yang didapat (misal: 12)
+  description Json // Menyimpan list keuntungan paket dalam format JSON
+  sesiCredit  Int // Jumlah sesi yang didapat (misal: 12)
   students    Student[] // Relasi ke siswa yang mengambil paket ini
+}
+
+model Inventory {
+  id         String @id @default(cuid())
+  locationId String
+  name       String
+  stock      Int    @default(0)
+
+  logs      InventoryLog[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([locationId])
+}
+
+model InventoryLog {
+  id          String    @id @default(cuid())
+  inventoryId String
+  inventory   Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+
+  type     String // "IN" (Tambah) atau "OUT" (Kurang)
+  quantity Int
+  notes    String?
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
 }
 
 enum Role {
@@ -208,8 +245,8 @@ enum AttendanceStatus {
   IZIN
   SAKIT
   ALPA
-  
 }
+
 enum ProcessStatus {
   LISTED
   SCHEDULED
@@ -222,11 +259,13 @@ enum AttendanceType {
   SAKIT
   CUTI
 }
+
 enum StudentStatus {
   NEWSTUDENT
   ACTIVE
   INACTIVE
   SUSPEND
+  UNPAID
 }
 
 enum PaymentStatus {

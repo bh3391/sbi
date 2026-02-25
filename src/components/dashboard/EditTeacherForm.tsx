@@ -3,6 +3,7 @@ import { useState } from "react";
 import { updateTeacher } from "@/app/actions/users"; // Pastikan buat action update
 import { X, Save, User, Briefcase, MapPin, Mail, FileText, Camera } from "lucide-react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 
 export default function EditTeacherForm({ locations, teacherData, onClose }: any) {
   const [loading, setLoading] = useState(false);
@@ -15,10 +16,24 @@ export default function EditTeacherForm({ locations, teacherData, onClose }: any
     
     // Kirim ID guru agar backend tahu mana yang diupdate
     const res = await updateTeacher(teacherData.id, data);
-    if (res.success) {
-      onClose();
-    }
-    setLoading(false);
+    toast.promise(updateTeacher(teacherData.id, data), {
+    loading: 'Memperbarui profil guru...',
+    success: (res: any) => { // Gunakan :any jika interface backend belum fix
+      if (res.success) {
+        onClose();
+        return `Data ${data.fullName || 'Guru'} berhasil diperbarui!`;
+      } else {
+        // Melempar error ke handler 'error' di bawah
+        throw new Error(res.message || "Gagal memperbarui data");
+      }
+    },
+    error: (err) => {
+      return err.message || "Terjadi kesalahan sistem";
+    },
+    finally: () => {
+      setLoading(false);
+    },
+  });
   };
 
   return (

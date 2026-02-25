@@ -5,6 +5,8 @@ import { QRCodeSVG } from "qrcode.react";
 
 export default function StudentProfileModal({ student, onClose }: any) {
   if (!student) return null;
+  const NGROK_URL = "https://fructed-lashawn-inertial.ngrok-free.dev";
+  const publicUrl = `${NGROK_URL}/p/${student.id}`;
 
   return (
     <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -73,40 +75,46 @@ export default function StudentProfileModal({ student, onClose }: any) {
           </div>
 
           {/* Quick Stats Cards */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-gradient-to-br from-cyan-50 to-white border border-cyan-100 p-4 rounded-3xl flex items-center gap-3 shadow-sm">
+          {/* Ganti bagian Sisa Sesi dengan ini */}
+          <div className="bg-gradient-to-br from-cyan-50 to-white border border-cyan-100 p-4 rounded-3xl flex flex-col gap-2 shadow-sm">
+            <div className="flex items-center gap-3">
               <div className="p-2.5 bg-white rounded-2xl text-cyan-500 shadow-sm"><CreditCard size={18} /></div>
               <div>
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Sisa Sesi</p>
                 <p className="text-base font-black text-slate-700">{student.remainingSesi}</p>
               </div>
             </div>
-            <div className="bg-gradient-to-br from-fuchsia-50 to-white border border-fuchsia-100 p-4 rounded-3xl flex items-center gap-3 shadow-sm">
-              <div className="p-2.5 bg-white rounded-2xl text-fuchsia-500 shadow-sm"><Calendar size={18} /></div>
-              <div>
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Presensi</p>
-                <p className="text-base font-black text-slate-700">{student.totalAttendances || 0}</p>
-              </div>
+            {/* Mini Progress Bar */}
+            <div className="w-full bg-slate-200/50 h-1.5 rounded-full overflow-hidden">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${(student.remainingSesi / (student.package?.sesiCredit || 12)) * 100}%` }}
+                className="h-full bg-cyan-500"
+              />
             </div>
           </div>
 
           {/* QR Code Section */}
-          <div className="bg-slate-50/50 rounded-[32px] p-6 border border-dashed border-slate-200 flex flex-col items-center space-y-4">
-            <div className="bg-white p-4 rounded-3xl shadow-sm ring-1 ring-slate-100">
-              <QRCodeSVG 
-                value={student.qrCodeId} 
-                size={140}
-                level={"H"}
-                includeMargin={false}
-              />
+          <div className="bg-white flex flex-colitems-center justify-center p-4 rounded-3xl shadow-sm ring-1 ring-slate-100">
+            <QRCodeSVG 
+              value={publicUrl} // SEBELUMNYA: student.qrCodeId
+              size={140}
+              level={"H"}
+              includeMargin={false}
+              imageSettings={{
+                src: "/logo-header.png", // Opsional: tambahkan logo kecil jika ada
+                x: undefined, y: undefined, height: 24, width: 24, excavate: true,
+              }}
+            />
+          </div>
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-1.5 text-slate-400 mb-1">
+              <Award size={10} strokeWidth={3} className="text-fuchsia-500" />
+              <p className="text-[9px] font-black uppercase tracking-[0.2em]">Scan for Parent Access</p>
             </div>
-            <div className="text-center">
-                <div className="flex items-center justify-center gap-1.5 text-slate-400 mb-1">
-                    <Hash size={10} strokeWidth={3} />
-                    <p className="text-[9px] font-black uppercase tracking-[0.2em]">Student Identifier</p>
-                </div>
-                <p className="text-[10px] font-bold text-slate-500 font-mono tracking-tighter bg-white px-3 py-1 rounded-full shadow-sm">{student.qrCodeId}</p>
-            </div>
+            <p className="text-[10px] font-bold text-slate-500 font-mono tracking-tighter bg-white px-3 py-1 rounded-full shadow-sm border border-slate-100">
+              {student.id}
+            </p>
           </div>
 
           {/* Detail List */}

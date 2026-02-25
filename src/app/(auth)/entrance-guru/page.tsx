@@ -44,9 +44,13 @@ export default function LoginPage() {
         {/* Header & Logo */}
         <div className="mb-8 text-center animate-in fade-in slide-in-from-top duration-700">
           <div className="mx-auto h-16 w-16 bg-white rounded-2xl flex items-center justify-center mb-3 shadow-xl shadow-cyan-100 border border-white">
-            <span className="text-transparent bg-clip-text bg-gradient-to-br from-cyan-500 to-fuchsia-500 text-2xl font-black">
-              B
-            </span>
+            <div className="mx-auto h-16 w-16 bg-white rounded-2xl flex items-center justify-center mb-3 shadow-xl shadow-cyan-100 border border-white overflow-hidden">
+              <img 
+                src="/logo-header.png" 
+                alt="Logo Bimbel Pro" 
+                className="w-16 h-16 object-contain" 
+              />
+            </div>
           </div>
           <h2 className="text-xl font-bold text-slate-800 tracking-tighter uppercase">
             BimbEls <span className="text-cyan-600">App</span>

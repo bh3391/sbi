@@ -3,6 +3,8 @@ import { Plus, X, Wallet, Calendar, User, FileText } from "lucide-react";
 import { useState } from "react";
 import { createManualPayment } from "@/app/actions/payments"; 
 import { motion, AnimatePresence } from "framer-motion"; // Tambahkan ini
+import { toast } from "sonner";
+import { auth } from "@/lib/auth";
 
 interface Student {
   id: string;
@@ -13,13 +15,14 @@ interface Student {
 interface AddPaymentProps {
   locationId: string;
   students: Student[];
+  currentUserId: string;
 }
 
-export default function AddPaymentFAB({ locationId, students }: AddPaymentProps) {
+export default function AddPaymentFAB({ locationId, students, currentUserId }: AddPaymentProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState(students[0]?.id || "");
   const [amount, setAmount] = useState<number | string>("");
-
+  
   const months = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni",
     "Juli", "Agustus", "September", "Oktober", "November", "Desember"
@@ -77,11 +80,34 @@ export default function AddPaymentFAB({ locationId, students }: AddPaymentProps)
                 <p className="text-cyan-50 text-[10px] opacity-80">Update saldo & transaksi siswa</p>
               </div>
 
-              <form action={async (formData) => {
-                  formData.append("locationId", locationId);
-                  await createManualPayment(formData);
-                  setIsOpen(false);
-                }} className="p-3 space-y-3 bg-slate-50">
+              <form 
+                  action={async (formData) => {
+                    // 1. Tambahkan data tambahan ke formData
+                    formData.append("locationId", locationId);
+                    formData.append("currentUserId", currentUserId);
+
+                    // 2. Gunakan toast.promise untuk feedback visual
+                    toast.promise(createManualPayment(formData), {
+                      loading: 'Sedang mencatat pembayaran...',
+                      success: (res) => {
+                        // Cek apakah response dari server action sukses
+                        if (res.success) {
+                          setIsOpen(false); // Tutup modal hanya jika berhasil
+                          return res.message || "Pembayaran berhasil disimpan!";
+                        } else {
+                          // Jika gagal (misal validasi backend), lempar error agar ditangkap blok 'error'
+                          throw new Error(res.message || "Gagal menyimpan data");
+                        }
+                      },
+                      error: (err) => {
+                        // Muncul jika terjadi throw Error di atas atau error jaringan/sistem
+                        return err.message || "Terjadi kesalahan sistem";
+                      },
+                    });
+                  }} 
+                  className="p-3 space-y-3 bg-slate-50"
+                >
+                
                 
                 <div className="space-y-1.5">
                   <label className="text-[9px] font-bold uppercase text-slate-400 ml-1 flex items-center gap-1">

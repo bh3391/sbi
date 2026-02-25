@@ -5,6 +5,7 @@ import { X, Plus, Check, MapPin, Trash2, CalendarDays, Loader2 } from "lucide-re
 import { saveAttendanceAction } from "@/app/actions/attendance";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 
 interface AbsensiFormProps {
   onClose: () => void;
@@ -86,19 +87,26 @@ export default function AbsensiForm({
     }
 
     setIsSubmitting(true);
-    try {
-      const response = await saveAttendanceAction(rows, teacherId);
-      if (response.success) {
-        onClose();
-        router.refresh();
-      } else {
-        alert(response.message);
+
+      toast.promise(saveAttendanceAction(rows, teacherId), {
+      loading: 'Sedang menyimpan absensi...',
+      success: (response) => {
+        if (response.success) {
+          onClose();
+          router.refresh();
+          return `Absensi berhasil disimpan!`;
+        } else {
+          // Jika server mengembalikan success: false
+          throw new Error(response.message);
+        }
+      },
+      error: (err) => {
+        return err.message || "Gagal menghubungi server.";
+      },
+      finally: () => {
+        setIsSubmitting(false);
       }
-    } catch (err) {
-      alert("Kesalahan sistem.");
-    } finally {
-      setIsSubmitting(false);
-    }
+      });
   };
 
   return (

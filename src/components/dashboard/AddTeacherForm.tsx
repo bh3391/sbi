@@ -3,6 +3,7 @@ import { useState } from "react";
 import { createUser } from "@/app/actions/users";
 import { X, Sparkles, User, Briefcase, MapPin, Mail } from "lucide-react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 
 export default function AddTeacherForm({ locations, onClose }: any) {
   const [loading, setLoading] = useState(false);
@@ -13,11 +14,24 @@ export default function AddTeacherForm({ locations, onClose }: any) {
     const formData = new FormData(e.currentTarget);
     const data = Object.fromEntries(formData.entries());
     
-    const res = await createUser(data);
-    if (res.success) {
-      onClose();
-    }
-    setLoading(false);
+    toast.promise(createUser(data), {
+    loading: 'Sedang membuat akun user...',
+    success: (res) => {
+      if (res.success) {
+        onClose();
+        return `Akun ${data.role || 'User'} berhasil dibuat!`;
+      } else {
+        // Melempar error agar ditangkap oleh handler 'error' di bawah
+        throw new Error(res.message || "Gagal membuat user");
+      }
+    },
+    error: (err) => {
+      return err.message || "Terjadi kesalahan sistem";
+    },
+    finally: () => {
+      setLoading(false);
+    },
+  });
   };
 
   return (

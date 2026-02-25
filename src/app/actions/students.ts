@@ -2,6 +2,8 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { sendFonneNotification } from "@/lib/fonnte";
+import { auth } from "@/lib/auth";
+
 
 export async function getAllStudents() {
   try {
@@ -34,6 +36,8 @@ export async function getAllStudents() {
 }
 
 export async function createStudent(formData: any) {
+  const session = await auth();
+  const currentUserId = session?.user?.id;
   try {
     // 1. Ambil data referensi paket terlebih dahulu
     const pkg = await prisma.package.findUnique({
@@ -66,6 +70,7 @@ export async function createStudent(formData: any) {
           status: "PENDING",
           category: "REGISTRATION",
           notes: "NEWSTUDENT",
+          createdById: currentUserId || null, // Karena ini dari pendaftaran, bisa jadi belum ada user yang login
         }
       });
 

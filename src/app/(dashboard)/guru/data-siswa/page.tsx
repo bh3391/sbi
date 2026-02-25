@@ -9,7 +9,7 @@ export default async function DataSiswaPage() {
     getFormDataReferences() // Kita buat fungsi ini di actions
   ]);
   return (
-    <div className="min-h-screen  p-4">
+    <div className="min-h-screen  p-1 mb-1">
         <DashboardHeader title="Database Siswa"  />
       
 

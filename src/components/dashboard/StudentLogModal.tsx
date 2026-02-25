@@ -6,6 +6,7 @@ import {
   Loader2, CheckCircle2, CalendarClock 
 } from "lucide-react";
 import { updateProcessStatusAction } from "@/app/actions/attendance";
+import { toast } from "sonner";
 
 interface StudentLogModalProps {
   student: any;
@@ -42,24 +43,28 @@ export default function StudentLogModal({
 
   const handleStatusUpdate = async (logId: string, status: string, customDate?: string) => {
     setIsUpdating(logId);
-    try {
-      // Menggunakan action yang sudah diimport
-      const res = await updateProcessStatusAction(logId, status, customDate);
-      
+    toast.promise(updateProcessStatusAction(logId, status, customDate), {
+    loading: 'Memperbarui status...',
+    success: (res) => {
       if (res?.success) {
         // Reset state lokal
         setActiveRescheduleId(null);
-        // Panggil refresh data dari parent
+        // Refresh data
         refreshLogs();
+        return `Status berhasil diperbarui ke ${status}`;
       } else {
-        alert(res?.message || "Gagal memperbarui status");
+        // Jika backend kirim success: false
+        throw new Error(res?.message || "Gagal memperbarui status");
       }
-    } catch (error) {
-      console.error("Update error:", error);
-      alert("Terjadi kesalahan sistem");
-    } finally {
+    },
+    error: (err) => {
+      console.error("Update error:", err);
+      return err.message || "Terjadi kesalahan sistem";
+    },
+    finally: () => {
       setIsUpdating(null);
-    }
+    },
+  });
   };
 
   return (

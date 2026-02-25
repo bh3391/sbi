@@ -3,6 +3,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { X, User, Phone, MapPin, Package as PkgIcon, BookOpen, Loader2 } from "lucide-react";
 import { createStudent } from "@/app/actions/students";
+import { toast } from "sonner";
 
 export default function AddStudentForm({ onClose, locations, packages, subjects }: any) {
   const [loading, setLoading] = useState(false);
@@ -13,13 +14,24 @@ export default function AddStudentForm({ onClose, locations, packages, subjects 
     const formData = new FormData(e.currentTarget);
     const data = Object.fromEntries(formData.entries());
     
-    const res = await createStudent(data);
-    if (res.success) {
-      onClose();
-    } else {
-      alert(res.message);
-    }
-    setLoading(false);
+    toast.promise(createStudent(data), {
+    loading: 'Mendaftarkan siswa baru...',
+    success: (res) => {
+      if (res.success) {
+        onClose();
+        // Berikan feedback tambahan yang spesifik
+        return `Siswa ${data.fullName} berhasil didaftarkan!`;
+      } else {
+        throw new Error(res.message);
+      }
+    },
+    error: (err) => {
+      return err.message || "Gagal mendaftarkan siswa";
+    },
+    finally: () => {
+      setLoading(false);
+    },
+  });
   };
 
   return (

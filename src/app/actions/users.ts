@@ -29,7 +29,7 @@ export async function createUser(formData: any) {
     revalidatePath("/admin/data-guru");
     return { success: true };
   } catch (error) {
-    return { success: false };
+    return { success: false, message: "Gagal membuat user baru" };
   }
 }
 
