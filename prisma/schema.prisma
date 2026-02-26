@@ -27,6 +27,7 @@ model User {
   inventoryLogs      InventoryLog[]
   paymentsCreated    Payment[]           @relation("PaymentCreator")
   paymentsVerified   Payment[]           @relation("PaymentVerifier")
+  schedules Schedule[]
 }
 
 model Location {
@@ -46,6 +47,7 @@ model Room {
   name       String
   locationId String
   location   Location @relation(fields: [locationId], references: [id])
+  schedules  Schedule[]
 }
 
 model Student {
@@ -67,14 +69,44 @@ model Student {
   attendances   AttendanceLog[]
   location      Location        @relation(fields: [locationId], references: [id])
   payments      Payment[]
+  schedules Schedule[]
 }
+model Schedule {
+  id        String   @id @default(cuid())
+  day       String   // Senin, Selasa, Rabu, dsb.
+  
+  // Relasi ke Ruangan
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
+  // Relasi ke Guru (User)
+  teacherId String
+  teacher   User     @relation(fields: [teacherId], references: [id])
+
+  // Relasi ke Sesi (Waktu)
+  sessionId String
+  session   StudentSession @relation(fields: [sessionId], references: [id])
+
+  // Relasi ke Siswa (Banyak siswa dalam satu jadwal/kelas)
+  students  Student[]
+
+  subject   Subject  @relation(fields: [subjectId], references: [id])
+  subjectId String   // <-- Pastikan field ini ada di schema
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([roomId])
+  @@index([teacherId])
+  @@index([day])
+}
 // Tambahan Tabel Subject agar dinamis (Bisa diatur di Dashboard Admin)
 model Subject {
   id          String          @id @default(cuid())
   name        String          @unique // Contoh: Matematika, English
   students    Student[]
   attendances AttendanceLog[]
+  schedules Schedule[]
 }
 
 // Tambahan Tabel StudentSession agar waktu sesi tidak manual ketik
@@ -84,6 +116,7 @@ model StudentSession {
   startTime   String // Contoh: "08:00"
   endTime     String // Contoh: "10:00"
   attendances AttendanceLog[]
+  schedules Schedule[]
 }
 
 model AttendanceLog {
