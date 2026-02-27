@@ -19,10 +19,10 @@ export default function InventoryLogDrawer({ item, onClose }: any) {
         <motion.div 
           initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
           transition={{ type: "spring", damping: 25, stiffness: 200 }}
-          className="relative top-10 bg-white w-full max-w-md rounded-t-[32px] shadow-2xl overflow-hidden flex flex-col min-h-screen"
+          className="relative top-10 bg-white/80 w-full max-w-md rounded-t-[32px] shadow-2xl overflow-hidden flex flex-col min-h-screen"
         >
           {/* Handle bar for visual */}
-          <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mt-3 mb-1" />
+          <div className="w-12 h-1.5 bg-fuchsia-500 rounded-full mx-auto mt-3 mb-1" />
 
           <div className="p-6">
             <div className="flex justify-between items-start mb-6">
@@ -30,7 +30,7 @@ export default function InventoryLogDrawer({ item, onClose }: any) {
                 <h2 className="text-xl font-black text-slate-800">{item.name}</h2>
                 <p className="text-xs text-slate-500">Riwayat Perubahan Stok</p>
               </div>
-              <button onClick={onClose} className="bg-slate-100 p-2 rounded-full"><X size={20}/></button>
+              <button onClick={onClose} className="bg-fuchsia-500 p-2 rounded-full text-white"><X size={20}/></button>
             </div>
 
             {/* Scrollable Log List */}

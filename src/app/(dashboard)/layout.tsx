@@ -15,7 +15,7 @@ export default async function DashboardLayout({
   if (!session) redirect("/login");
 
   return (
-    <div className="min-h-screen bg-cyan-50/50 relative overflow-x-hidden font-sans">
+    <div className="min-h-screen bg-cyan-50/50 relative w-full overflow-x-hidden font-sans">
       
       {/* Background Decor - Refined for "Glass" look */}
       <div className="fixed top-[-10%] right-[-15%] w-80 h-80 bg-cyan-200/20 rounded-full blur-[100px] -z-10 animate-pulse" />

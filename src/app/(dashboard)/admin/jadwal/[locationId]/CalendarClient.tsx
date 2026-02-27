@@ -12,8 +12,9 @@ import { deleteSchedule } from "@/app/actions/schedule";
 import ScheduleForm from "@/components/dashboard/ScheduleForm";
 import DashboardHeader from "@/components/dashboard/header";
 import {toast,Toaster} from "sonner";
+import AvailabilityExplorer from "@/components/dashboard/AvailibilityExplorer";
 
-const DAYS = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+const DAYS = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
 interface CalendarClientProps {
   locationData: any; // Data lokasi tunggal beserta room & schedule
   teachers: any[];   // Daftar guru untuk dropdown
@@ -48,13 +49,7 @@ export default function CalendarClient({ locationData,
 };
 
   // Navigasi ruangan di dalam lokasi ini
-  const handleNext = () => {
-    if (roomIdx < rooms.length - 1) setRoomIdx(roomIdx + 1);
-  };
-
-  const handlePrev = () => {
-    if (roomIdx > 0) setRoomIdx(roomIdx - 1);
-  };
+  
   const handleOpenAdd = () => {
   setSelectedSchedule(null);
   setIsModalOpen(true);
@@ -63,67 +58,116 @@ const handleOpenEdit = (schedule: any) => {
   setSelectedSchedule(schedule);
   setIsModalOpen(true);
 };
+
+const handleSelectAvailableSlot = (day: string, room: any, session: any, schedule?: any) => {
+  // 1. Arahkan Navigasi ke hari dan ruangan yang dipilih
+  setSelectedDay(day);
+  const rIdx = rooms.findIndex((r: any) => r.id === room.id);
+  if (rIdx !== -1) setRoomIdx(rIdx);
+  
+  // 2. Tentukan Data Awal untuk Modal
+  if (schedule) {
+    // MODE EDIT: Jika diklik dari slot yang sudah ada (AVAILABLE)
+    // Pastikan struktur object sesuai dengan yang diharapkan oleh ScheduleForm
+    setSelectedSchedule({
+      ...schedule,
+      // Jika di database nama fieldnya berbeda, petakan di sini
+      sessionId: session.id, 
+      day: day
+    });
+  } else {
+    // MODE TAMBAH: Jika diklik dari slot yang benar-benar kosong (EMPTY)
+    setSelectedSchedule({
+      sessionId: session.id,
+      day: day,
+      locationId: currentRoom.locationId, // Sesuaikan dengan kebutuhan form Anda
+      teacherId: "", // Reset atau beri default
+      subjectId: "",
+      students: [], // Penting: array kosong agar tidak null
+    });
+  }
+
+  // 3. Buka Modal
+  setIsModalOpen(true);
+};
   return (
-    <main className="min-h-screen bg-[#F8FAFC] pb-24">
+    <main className="min-h-screen bg-cyan-50 pb-24">
       {/* 1. STICKY HEADER & DAY FILTER */}
-      <div className=" bg-white border-b border-slate-100 sticky top-0 z-30 shadow-sm">
+      <div className=" bg-fuchsia-50 border-b border-slate-100 sticky top-0 z-30 shadow-sm">
         <DashboardHeader 
           title={`Jadwal / ${locationData.name}`} 
                    
           
         />
         
-        <div className="flex gap-3 p-2 mt-1 overflow-x-auto no-scrollbar pb-1">
+        <div className="px-3 py-2 ">
+        <div className="flex p-1 bg-slate-100 rounded-xl gap-1">
           {DAYS.map((day) => (
-            <button 
-              key={day} 
+            <button
+              key={day}
               onClick={() => setSelectedDay(day)}
-              className={`px-1 py-1 rounded-2xl text-[10px] font-black uppercase transition-all min-w-[100px] border ${
-                selectedDay === day 
-                ? "bg-fuchsia-600 border-fuchsia-600 text-white shadow-lg shadow-fuchsia-100 scale-105" 
-                : "bg-white border-slate-100 text-slate-400 hover:border-fuchsia-200"
+              className={`flex-1 py-2 rounded-lg text-[9px] font-black uppercase transition-all ${
+                selectedDay === day
+                  ? "bg-cyan-500 text-white shadow-sm scale-[1.02]"
+                  : "text-slate-400 hover:text-slate-600"
               }`}
             >
-              {day}
+              {/* Tampilkan 3 huruf pertama saja di layar sangat kecil jika perlu (opsional) */}
+              <span className="hidden sm:inline">{day}</span>
+              <span className="sm:hidden">{day.substring(0, 3)}</span>
             </button>
           ))}
         </div>
       </div>
+      {/* 2. ROOM SELECTOR - SCALEABLE DROPDOWN */}
+        <div className="mb-2 px-1">
+          <div className="relative group">
+            {/* Label kecil di luar box agar rapi */}
+            <label className="text-[9px]  text-slate-400 uppercase tracking-[0.2em] ml-5 mb-2 block">
+              Pilih Ruang Belajar
+            </label>
+            
+            <div className="relative flex items-center">
+              {/* Icon Dekoratif */}
+              <div className="absolute left-2 z-10 h-8 w-8 bg-cyan-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-cyan-100">
+                <MapPin size={12} />
+              </div>
 
-      <div className="p-3 bg-cyan-50">
-        {/* 2. ROOM SELECTOR (NAVIGASI RUANGAN) */}
-        <div className="flex items-center justify-between mb-6 bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 bg-cyan-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-cyan-100">
-              <MapPin size={22} />
+              <select 
+                value={roomIdx}
+                onChange={(e) => setRoomIdx(parseInt(e.target.value))}
+                className="w-full bg-white border border-slate-100 p-2 pl-16 rounded-lg text-sm  text-slate-800 uppercase shadow-sm appearance-none outline-none focus:ring-4 focus:ring-cyan-50 transition-all cursor-pointer"
+              >
+                {rooms.map((room: any, index: number) => (
+                  <option key={room.id} value={index}>
+                    {room.name} {index === roomIdx ? "— Active" : ""}
+                  </option>
+                ))}
+              </select>
+
+              {/* Custom Chevron Icon agar tidak pakai bawaan browser yang kaku */}
+              <div className="absolute right-6 pointer-events-none text-slate-400">
+                <ChevronRight size={20} className="rotate-90" />
+              </div>
             </div>
-            <div>
-              <h2 className="text-sm font-black text-slate-800 uppercase leading-none">
-                {currentRoom?.name || "Tidak ada ruangan"}
-              </h2>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 italic">
-                Ruang {roomIdx + 1} dari {rooms.length}
+
+            {/* Info Indikator di bawah dropdown */}
+            <div className="flex justify-between px-6 mt-2">
+              <p className="text-[8px] font-bold text-slate-400 uppercase italic">
+                Total {rooms.length} Ruangan Tersedia
               </p>
+              {rooms[roomIdx]?.schedules?.filter((s:any) => s.day === selectedDay).length > 0 && (
+                <p className="text-[8px] font-black text-cyan-600 uppercase">
+                  {rooms[roomIdx].schedules.filter((s:any) => s.day === selectedDay).length} Jadwal Terplot
+                </p>
+              )}
             </div>
-          </div>
-          
-          <div className="flex gap-1.5">
-            <button 
-              onClick={handlePrev} 
-              disabled={roomIdx === 0}
-              className={`p-2.5 rounded-xl transition-all ${roomIdx === 0 ? "text-slate-200" : "bg-slate-50 text-slate-400 active:scale-90"}`}
-            >
-              <ChevronLeft size={18}/>
-            </button>
-            <button 
-              onClick={handleNext} 
-              disabled={roomIdx === rooms.length - 1}
-              className={`p-2.5 rounded-xl transition-all ${roomIdx === rooms.length - 1 ? "text-slate-200" : "bg-slate-50 text-slate-400 active:scale-90"}`}
-            >
-              <ChevronRight size={18}/>
-            </button>
           </div>
         </div>
+      </div>
+
+      <div className="p-3 bg-cyan-50">
+        
 
         {/* 3. SCHEDULE LISTS */}
         <AnimatePresence mode="wait">
@@ -261,6 +305,12 @@ const handleOpenEdit = (schedule: any) => {
     }}
   />
 )}
+<AvailabilityExplorer 
+      rooms={rooms}
+      sessions={sessions}
+      days={DAYS}
+      onSelectSlot={handleSelectAvailableSlot}
+    />
     </main>
   );
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 
 export default function LocationTabs({ locations, activeLocationId }: any) {
   return (
-    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+    <div className="flex gap-2 pt-2 overflow-x-auto no-scrollbar pb-2">
       {locations.map((loc: any) => (
         <Link
           key={loc.id}

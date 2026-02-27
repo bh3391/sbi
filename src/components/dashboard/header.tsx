@@ -9,8 +9,8 @@ export default function DashboardHeader({ title }: { title: string }) {
   
 
   return (
-    <div className="flex items-center justify-between bg-cyan-50 border-b border-cyan-100 p-2">
-      <div className="flex items-center gap-1">
+    <div className="flex items-center justify-between  bg-cyan-50 border-b border-cyan-100 p-2">
+      <div className="flex items-center gap-1 max-w-md">
         {/* Tombol Back: Mengikuti style tombol close (X) di drawer */}
         <button
           onClick={() => router.back()}

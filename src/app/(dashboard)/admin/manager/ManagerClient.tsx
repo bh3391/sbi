@@ -68,7 +68,7 @@ export default function ManagerClient({ initialLocations, initialSessions, initi
                 <button onClick={() => setModal({ type: 'room' })} className="bg-cyan-500 text-white py-2 rounded-3xl font-black text-[9px] uppercase tracking-widest flex flex-col items-center gap-2 shadow-lg shadow-cyan-100"><DoorOpen size={20}/> Ruangan</button>
               </div>
               {initialLocations.map((loc: any) => (
-                <div key={loc.id} className="flex flex-col gap-2">
+                <div key={loc.id} className="flex flex-col gap-1">
                     {/* BARIS LOKASI UTAMA */}
                     <div 
                     onClick={() => toggleLocation(loc.id)}
@@ -93,9 +93,9 @@ export default function ManagerClient({ initialLocations, initialSessions, initi
                             {loc._count?.rooms || 0} RUANG
                         </span>
                         </div>
-                    </div>
+                   
 
-                    <div className="flex items-center gap-2">
+                    
                         <button 
                         onClick={(e) => {
                             e.stopPropagation(); // Agar toggleLocation tidak terpicu
@@ -107,7 +107,8 @@ export default function ManagerClient({ initialLocations, initialSessions, initi
                         </button>
                         <ChevronRight size={16} className={`text-slate-300 transition-transform ${expandedLocation === loc.id ? "rotate-90 text-fuchsia-500" : ""}`} />
                     </div>
-                    </div>
+                     </div>
+                    
 
                     {/* DAFTAR RUANGAN (SUB-LIST) */}
                     <AnimatePresence>

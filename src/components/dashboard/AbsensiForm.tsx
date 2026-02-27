@@ -135,7 +135,7 @@ export default function AbsensiForm({
             {teacherName} • {new Date().toLocaleDateString("id-ID", { day: 'numeric', month: 'short' })}
           </span>
         </div>
-        <button onClick={onClose} className="p-1.5 bg-fuchsia-500 text-white rounded-md active:scale-90">
+        <button onClick={onClose} className="p-1.5 bg-fuchsia-500 text-white rounded-full active:scale-90">
           <X size={16} />
         </button>
       </header>

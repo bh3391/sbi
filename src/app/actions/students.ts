@@ -49,6 +49,11 @@ export async function createStudent(formData: any) {
     // 2. Gunakan TRANSACTION untuk Database
     // Jika ada error di dalam sini, Student dan Payment TIDAK AKAN tersimpan
     const transactionResult = await prisma.$transaction(async (tx) => {
+  // 1. Tentukan jumlah sesi awal berdasarkan metode pembayaran
+  // Jika Cash, langsung beri sesi dari paket. Jika Transfer, mulai dari 0.
+      const initialSesi = formData.method === "CASH" ? pkg.sesiCredit : 0;
+      const paymentMethod = formData.method || "TRANSFER";
+
       const student = await tx.student.create({
         data: {
           fullName: formData.fullName,
@@ -59,7 +64,8 @@ export async function createStudent(formData: any) {
           packageId: formData.packageId,
           subjectId: formData.subjectId,
           status: "NEWSTUDENT",
-          remainingSesi: pkg.sesiCredit,
+          // Logika Sesi Disini
+          remainingSesi: initialSesi, 
         },
       });
 
@@ -67,10 +73,12 @@ export async function createStudent(formData: any) {
         data: {
           studentId: student.id,
           amount: pkg.price,
-          status: "PENDING",
+          // Jika Cash, anggap sudah lunas (SUCCESS/PAID). Jika Transfer, PENDING.
+          status: formData.method === "CASH" ? "SUCCESS" : "PENDING",
           category: "REGISTRATION",
           notes: "NEWSTUDENT",
-          createdById: currentUserId || null, // Karena ini dari pendaftaran, bisa jadi belum ada user yang login
+          method: paymentMethod, // Ambil dari formData (CASH atau TRANSFER) default TRANSFER
+          createdById: currentUserId || null,
         }
       });
 

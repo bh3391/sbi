@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import InventoryList from "@/components/dashboard/InventoryList";
 import AddInventoryFAB from "@/components/dashboard/AddInventoryFAB";
 import LocationTabs from "@/components/dashboard/LocationTabs";
+import DashboardHeader from "@/components/dashboard/header";
 
 export default async function InventoryPage({
   searchParams,
@@ -37,11 +38,8 @@ export default async function InventoryPage({
   return (
     <main className="min-h-screen bg-cyan-50 pb-24">
       {/* Header Section */}
-      <div className="bg-cyan-50 border-b border-slate-200 px-4 pt-6 pb-2 sticky top-0 z-30">
-        <h1 className="text-xl font-bold text-cyan-600 uppercase tracking-tight">
-          Inventory Barang
-        </h1>
-        <p className="text-xs text-slate-500 mb-4">Manajemen stok alat & bahan</p>
+      <div className="bg-cyan-50 border-b border-slate-200  pb-2 sticky top-0 z-30">
+        <DashboardHeader title="Inventaris Barang" />
         
         {/* Horizontal Scroll Tabs untuk Lokasi */}
         <LocationTabs 

@@ -33,6 +33,8 @@ export default function ScheduleForm({
   const isEditMode = !!initialData;
   const [isPending, setIsPending] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  
   const displayStudents = students
   .filter((std) => {
     const searchLower = searchQuery.toLowerCase();
@@ -97,28 +99,28 @@ export default function ScheduleForm({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-      <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl max-h-[90vh] overflow-y-auto relative border border-slate-100">
+    <div className="fixed inset-0 z-[500] flex items-center justify-center px-1 pt-24 pb-0 bottom-0 bg-slate-900/60 backdrop-blur-sm">
+      <div className=" w-full max-w-lg bg-cyan-50  p-4 rounded-2xl max-h-[90vh] overflow-y-auto relative border border-slate-100">
         
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between  items-center mb-8 border-b border-slate-100">
           <div>
-            <h2 className="text-xl font-black uppercase italic mb-4">
+            <h2 className="text-lg  uppercase  mb-4">
                 {isEditMode ? "Edit Jadwal" : "Plot Jadwal Baru"}
             </h2>
             <p className="text-[10px] font-bold text-fuchsia-500 uppercase tracking-widest mt-2">Ruang {currentRoom.name} • {selectedDay}</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-full transition-colors">
-            <X size={24} className="text-slate-400" />
+          <button onClick={onClose} className="p-2 bg-fuchsia-500 hover:bg-slate-50 rounded-full transition-colors">
+            <X size={24} className="text-slate-50" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Select Sesi */}
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase ml-4">Waktu Belajar</label>
+            <label className="text-[10px] font-black text-cyan-500 uppercase ml-4">Waktu Belajar</label>
             <div className="relative">
-              <select name="sessionId" defaultValue={initialData?.sessionId} required className="w-full bg-slate-50 border border-slate-100 p-4 rounded-2xl text-xs font-bold appearance-none focus:ring-2 focus:ring-fuchsia-100 outline-none">
+              <select name="sessionId" defaultValue={initialData?.sessionId} required className="w-full bg-white border border-slate-100 p-4 rounded-2xl text-xs font-bold appearance-none focus:ring-2 focus:ring-fuchsia-100 outline-none">
                 <option value="">Pilih Sesi</option>
                 {sessions.map((s) => (
                   <option key={s.id} value={s.id}>{s.name} ({s.startTime} - {s.endTime})</option>
@@ -131,15 +133,15 @@ export default function ScheduleForm({
           {/* Teacher & Subject */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase ml-4">Pengajar</label>
-              <select name="teacherId" defaultValue={initialData?.teacherId} required className="w-full bg-slate-50 border border-slate-100 p-4 rounded-2xl text-xs font-bold appearance-none outline-none">
+              <label className="text-[10px] font-black text-cyan-500 uppercase ml-4">Pengajar</label>
+              <select name="teacherId" defaultValue={initialData?.teacherId} required className="w-full bg-white border border-slate-100 p-4 rounded-2xl text-xs font-bold appearance-none outline-none">
                 <option value="">Pilih Guru</option>
                 {teachers.map((t) => <option key={t.id} value={t.id}>{t.nickname || t.fullName}</option>)}
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase ml-4">Mata Pelajaran</label>
-              <select name="subjectId" defaultValue={initialData?.subjectId} required className="w-full bg-slate-50 border border-slate-100 p-4 rounded-2xl text-xs font-bold appearance-none outline-none">
+              <label className="text-[10px] font-black text-cyan-500 uppercase ml-4">Mata Pelajaran</label>
+              <select name="subjectId" defaultValue={initialData?.subjectId} required className="w-full bg-white border border-slate-100 p-4 rounded-2xl text-xs font-bold appearance-none outline-none">
                 <option value="">Pilih Mapel</option>
                 {subjects.map((sj) => <option key={sj.id} value={sj.id}>{sj.name}</option>)}
               </select>
@@ -151,10 +153,10 @@ export default function ScheduleForm({
   {/* LABEL & COUNTER */}
   <div className="flex justify-between items-end px-4">
     <div>
-      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+      <label className="text-[10px] font-bold text-cyan-500 uppercase tracking-widest">
         Daftar Murid
       </label>
-      <p className="text-[18px] font-black text-slate-800 leading-none">
+      <p className="text-[18px] font-bold text-slate-800 leading-none">
         {selectedStudents.length} <span className="text-slate-300 text-xs">/ 5 TERPILIH</span>
       </p>
     </div>
@@ -162,7 +164,7 @@ export default function ScheduleForm({
       <button 
         type="button"
         onClick={() => setSelectedStudents([])}
-        className="text-[9px] font-black text-rose-500 uppercase border-b border-rose-200 pb-0.5 hover:text-rose-600"
+        className="text-[9px] font-bold text-rose-500 uppercase border-b border-rose-200 pb-0.5 hover:text-rose-600"
       >
         Reset Pilihan
       </button>
@@ -179,7 +181,7 @@ export default function ScheduleForm({
       placeholder="Cari nama atau panggilan..."
       value={searchQuery}
       onChange={(e) => setSearchQuery(e.target.value)}
-      className="w-full bg-slate-100 border-2 border-transparent p-4 pl-12 rounded-[1.5rem] text-xs font-bold focus:bg-white focus:border-cyan-100 focus:ring-4 focus:ring-cyan-50 transition-all outline-none"
+      className="w-full bg-white border-2 border-transparent p-4 pl-12 rounded-[1.5rem] text-xs font-bold focus:bg-white focus:border-cyan-100 focus:ring-4 focus:ring-cyan-50 transition-all outline-none"
     />
   </div>
 
@@ -198,7 +200,7 @@ export default function ScheduleForm({
             {std?.nickname || std?.fullName?.split(' ')[0]}
             <button 
               onClick={() => handleStudentToggle(id)}
-              className="bg-white/20 hover:bg-white/40 rounded-full p-0.5"
+              className="bg-white hover:bg-white/40 rounded-full p-0.5"
             >
               <X size={10} />
             </button>
@@ -251,7 +253,7 @@ export default function ScheduleForm({
             className={`w-full py-5 rounded-[1.5rem] font-black uppercase italic tracking-widest shadow-lg transition-all active:scale-95 flex items-center justify-center gap-3 ${
               isPending 
               ? "bg-slate-200 text-slate-400 cursor-not-allowed" 
-              : "bg-gradient-to-r from-cyan-500 to-fuchsia-600 text-white shadow-fuchsia-100"
+              : "bg-fuchsia-600 text-white shadow-fuchsia-100"
             }`}
           >
             {isPending ? "Sedang Menyimpan..." : "Simpan Jadwal"}

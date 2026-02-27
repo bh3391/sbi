@@ -1,12 +1,13 @@
 "use client";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { X, User, Phone, MapPin, Package as PkgIcon, BookOpen, Loader2 } from "lucide-react";
+import { X, User, Phone, MapPin, Package as PkgIcon, BookOpen, Loader2, CreditCard, Banknote, Info } from "lucide-react";
 import { createStudent } from "@/app/actions/students";
 import { toast } from "sonner";
 
 export default function AddStudentForm({ onClose, locations, packages, subjects }: any) {
   const [loading, setLoading] = useState(false);
+  const [method, setMethod] = useState("TRANSFER");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -129,15 +130,78 @@ export default function AddStudentForm({ onClose, locations, packages, subjects 
               </div>
             </div>
           </div>
-          
-          <div className="p-4 bg-cyan-50/50 rounded-2xl border border-cyan-100 border-dashed">
-             <p className="text-[9px] text-cyan-700 font-medium leading-relaxed uppercase tracking-tight text-center">
-               Siswa akan mendapatkan kuota sesi secara otomatis sesuai dengan paket yang dipilih setelah tombol simpan ditekan.
-             </p>
-          </div>
-        </form>
+         
 
-        <footer className="p-6 bg-white border-t border-slate-50">
+
+
+
+          <div className="space-y-3 px-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
+              Metode Pembayaran
+            </label>
+            <input type="hidden" name="method" value={method} />
+            
+            <div className="grid grid-cols-2 gap-3">
+              {/* OPSI TRANSFER */}
+              <button
+                type="button"
+                onClick={() => setMethod("TRANSFER")}
+                className={`p-4 rounded-[2rem] border-2 transition-all flex flex-col items-center gap-2 ${
+                  method === "TRANSFER"
+                    ? "border-cyan-500 bg-cyan-50 shadow-lg shadow-cyan-100"
+                    : "border-slate-100 bg-white text-slate-400 hover:border-slate-200"
+                }`}
+              >
+                <div className={`h-10 w-10 rounded-2xl flex items-center justify-center ${
+                  method === "TRANSFER" ? "bg-cyan-500 text-white" : "bg-slate-100"
+                }`}>
+                  <CreditCard size={20} />
+                </div>
+                <div className="text-center">
+                  <p className={`text-[11px] font-black uppercase ${method === "TRANSFER" ? "text-cyan-700" : ""}`}>Transfer</p>
+                  <p className="text-[8px] font-bold opacity-60 uppercase mt-0.5">Sesi Pending</p>
+                </div>
+              </button>
+
+              {/* OPSI CASH */}
+              <button
+                type="button"
+                onClick={() => setMethod("CASH")}
+                className={`p-4 rounded-[2rem] border-2 transition-all flex flex-col items-center gap-2 ${
+                  method === "CASH"
+                    ? "border-emerald-500 bg-emerald-50 shadow-lg shadow-emerald-100"
+                    : "border-slate-100 bg-white text-slate-400 hover:border-slate-200"
+                }`}
+              >
+                <div className={`h-10 w-10 rounded-2xl flex items-center justify-center ${
+                  method === "CASH" ? "bg-emerald-500 text-white" : "bg-slate-100"
+                }`}>
+                  <Banknote size={20} />
+                </div>
+                <div className="text-center">
+                  <p className={`text-[11px] font-black uppercase ${method === "CASH" ? "text-emerald-700" : ""}`}>Tunai / Cash</p>
+                  <p className="text-[8px] font-bold opacity-60 uppercase mt-0.5">Sesi Aktif</p>
+                </div>
+              </button>
+            </div>
+
+            {/* INFORMASI DINAMIS */}
+            <div className={`mt-4 p-4 rounded-2xl border-2 border-dashed flex items-start gap-3 transition-colors ${
+              method === "CASH" ? "border-emerald-100 bg-emerald-50/50" : "border-amber-100 bg-amber-50/50"
+            }`}>
+              <div className={`mt-1 ${method === "CASH" ? "text-emerald-500" : "text-amber-500"}`}>
+                <Info size={16} />
+              </div>
+              <p className="text-[10px] font-bold text-slate-600 leading-relaxed">
+                {method === "CASH" 
+                  ? "Pembayaran Tunai akan langsung mengaktifkan kuota sesi siswa. Gunakan ini jika uang sudah diterima di outlet."
+                  : "Metode Transfer akan membuat status pembayaran PENDING. Admin pusat harus melakukan verifikasi sebelum sesi siswa aktif."}
+              </p>
+            </div>
+          </div>
+          
+          
+          <footer className="p-6 bg-white border-t border-slate-50">
           <button 
             type="submit" 
             disabled={loading}
@@ -147,6 +211,9 @@ export default function AddStudentForm({ onClose, locations, packages, subjects 
             {loading ? <Loader2 className="animate-spin" size={16} /> : "Konfirmasi & Daftarkan"}
           </button>
         </footer>
+        </form>
+
+        
       </motion.div>
     </div>
   );

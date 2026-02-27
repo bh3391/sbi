@@ -11,7 +11,7 @@ export default async function BottomNav() {
   const homeLink = role === "ADMIN" ? "/admin" : "/guru";
 
   return (
-    <nav className="fixed bottom-4 left-4 right-4 h-14 bg-white/80 backdrop-blur-md border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-2xl flex items-center justify-between px-6 z-50">
+    <nav className="fixed max-w-md mx-auto bottom-4 left-4 right-4 h-14 bg-white/80 backdrop-blur-md border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-2xl flex items-center justify-between px-6 z-50">
       
       {/* Tombol Home - Floating Style with Cyan Accent */}
       <Link href={homeLink} className="flex flex-col items-center gap-0.5 group">
