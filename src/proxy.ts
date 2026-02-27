@@ -1,9 +1,8 @@
-// src/middleware.ts (atau proxy.ts)
-import { auth } from "@/lib/auth";
- 
-export default auth((req) => {
-  // Biarkan semua lewat dulu untuk testing
-});
+import NextAuth from "next-auth";
+import { authConfig } from "@/lib/auth.config";
+
+// Gunakan authConfig yang tidak mengandung Prisma
+export default NextAuth(authConfig).auth;
 
 export const config = {
   matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
