@@ -2,29 +2,14 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { GraduationCap, ArrowRight, Users, Sparkles, LogIn } from "lucide-react";
+import NavbarClient from "@/components/shared/NavbarPublic";
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white font-sans selection:bg-cyan-100">
       
       {/* --- NAVIGATION --- */}
-      <nav className="fixed top-0 w-full z-50 bg-cyan-100/70 backdrop-blur-lg border-b border-slate-50">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-tr from-cyan-500 to-fuchsia-600 flex items-center justify-center text-white shadow-lg">
-              <GraduationCap size={18} />
-            </div>
-            <span className="font-black text-slate-800 tracking-tighter text-lg">BIMB<span className="text-cyan-500">ELS.</span></span>
-          </div>
-          
-          <Link 
-            href="/entrance-guru" 
-            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-fuchsia-600 transition-colors"
-          >
-            <LogIn size={14} /> Portal Guru
-          </Link>
-        </div>
-      </nav>
+      <NavbarClient/>
 
       {/* --- SECTION 1: HERO --- */}
       <section className="relative pt-32 pb-20 px-6 overflow-hidden">

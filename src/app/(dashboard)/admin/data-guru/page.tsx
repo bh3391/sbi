@@ -10,7 +10,7 @@ export default async function DataGuruPage() {
   ]);
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-cyan-100 to-fuchsia-50  pb-20">
+    <main className="min-h-screen bg-gradient-to-br from-cyan-50 to-fuchsia-50/50  pb-20">
         <DashboardHeader title="Database Guru"  />
       <DataGuruClient teachers={teachers} locations={locations} />
     </main>

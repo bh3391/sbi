@@ -37,7 +37,7 @@ export default async function TeacherAgendaPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-20">
+    <div className="min-h-screen bg-cyan-50 pb-20">
       <TeacherAgendaClient 
         initialSchedules={initialSchedules}
         allTeachers={allTeachers}

@@ -3,9 +3,11 @@ import { auth } from "@/lib/auth";
 import Link from "next/link";
 import DashboardHeader from "@/components/dashboard/header";
 import { Users, MapPin, Calendar, Clock, ArrowRight, HatGlasses, CurrencyIcon, ArchiveIcon, Settings2Icon, ChartAreaIcon } from "lucide-react";
+import { redirect } from "next/navigation";
 
 export default async function GuruDashboard() {
   const session = await auth();
+  if (session?.user?.role !== "ADMIN") redirect("/guru");
 
   const menus = [
     {

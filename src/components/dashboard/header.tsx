@@ -31,7 +31,7 @@ export default function DashboardHeader({ title }: { title: string }) {
       </div>
 
       {/* Avatar: Konsisten dengan font drawer */}
-      <Link href="/guru" className=" font-black text-white  ">
+      <Link href="/" className=" font-black text-white  ">
         <img src="/logo-header.png" alt="Avatar" className="w-12 h-12 rounded-full" />
       </Link>
     </div>

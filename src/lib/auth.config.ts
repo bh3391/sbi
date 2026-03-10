@@ -1,47 +1,38 @@
-import { NextAuthConfig } from "next-auth";
+import type { NextAuthConfig } from "next-auth";
 
 export const authConfig = {
   pages: {
     signIn: "/entrance-guru",
   },
   callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        // Kita simpan role sebagai string murni
+        token.role = (user as any).role;
+      }
+      return token;
+    },
     authorized({ auth, request: { nextUrl } }) {
-       // Biarkan semua akses dulu, nanti kita handle di middleware.ts
-      const user = auth?.user as any;
-      const isLoggedIn = !!user;
+      const isLoggedIn = !!auth?.user;
       const { pathname } = nextUrl;
 
-      // Normalisasi role
-      const role = user?.role?.toString().toUpperCase().trim();
+      // Proteksi rute utama (hanya cek login)
+      const isDashboardRoute = pathname.startsWith("/admin") || pathname.startsWith("/guru");
 
-      const isGuruRoute = pathname.startsWith("/guru");
-      const isAdminRoute = pathname.startsWith("/admin");
-
-      // Logika Proteksi
-      if (isGuruRoute || isAdminRoute) {
-        if (!isLoggedIn) return false;
-
-        // JIKA ROLE UNDEFINED: Jangan dilempar dulu! 
-        // Biarkan masuk ke halaman agar session stabil.
-        if (!role) return true; 
-
-        if (isAdminRoute && role !== "ADMIN") {
-          return Response.redirect(new URL("/", nextUrl));
-        }
-        
-        if (isGuruRoute && (role !== "TEACHER" && role !== "GURU" && role !== "ADMIN")) {
-          return Response.redirect(new URL("/", nextUrl));
-        }
-        return true;
+      if (isDashboardRoute) {
+        if (isLoggedIn) return true; // Biarkan masuk, validasi role dilakukan di Layout.tsx
+        return false; // Redirect ke /entrance-guru
       }
 
+      // Jika sudah login dan mencoba akses login page lagi
       if (isLoggedIn && pathname === "/entrance-guru") {
-        const target = role === "ADMIN" ? "/admin" : "/guru";
-        return Response.redirect(new URL(target, nextUrl));
+        const role = (auth.user as any)?.role;
+        return Response.redirect(new URL(role === "ADMIN" ? "/admin" : "/guru", nextUrl));
       }
 
       return true;
     },
   },
-  providers: [],
+  providers: [], // Kosongkan di sini, isi di auth.ts
 } satisfies NextAuthConfig;

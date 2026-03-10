@@ -10,29 +10,44 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
+  const role = session?.user?.role;
 
-  // Proteksi Route - Server Side
-  if (!session) redirect("/login");
+  // 1. Cek apakah sudah login
+  if (!session) {
+    redirect("/entrance-guru");
+  }
+
+  // 2. Logika Redirect Berdasarkan Role (Pemisahan Rute)
+  // Pastikan Admin tidak nyasar ke folder lain dan Teacher tidak masuk ke /admin
+  const isAllowed = role === "ADMIN" || role === "TEACHER";
+
+  if (!isAllowed) {
+    console.log(`Access Denied for role: ${role}`);
+    redirect("/"); 
+  }
+
+  // Catatan: Next.js v13+ Layout tidak memiliki akses langsung ke current pathname.
+  // Proteksi spesifik rute (Admin tidak boleh ke /guru dst) 
+  // sebaiknya tetap ada di masing-masing page.tsx atau middleware.
+  // Namun, kita bisa memastikan data role dilempar ke komponen anak jika perlu.
 
   return (
-    <div className="min-h-screen bg-cyan-50/50 relative w-full overflow-x-hidden font-sans">
+    <div className="min-h-screen bg-cyan-50/50 relative w-full rounded-2xl overflow-x-hidden font-sans">
       
-      {/* Background Decor - Refined for "Glass" look */}
-      <div className="fixed top-[-10%] right-[-15%] w-80 h-80 bg-cyan-200/20 rounded-full blur-[100px] -z-10 animate-pulse" />
-      <div className="fixed bottom-[5%] left-[-10%] w-64 h-64 bg-teal-100/30 rounded-full blur-[80px] -z-10" />
+      
 
       {/* Konten Utama */}
-      {/* pb-24 memberikan ruang yang cukup untuk Floating BottomNav agar tidak menutupi konten terakhir */}
       <main className="pb-24 max-w-md mx-auto min-h-screen relative px-1 pt-2">
+        {/* Header Info (Opsional - Bagus untuk Debugging/Status) */}
+        
+
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
           {children}
           <Toaster position="top-center" richColors />
-          <BottomNav />
+          {/* Kirim role ke BottomNav agar menu menyesuaikan */}
+          <BottomNav  />
         </div>
       </main>
-
-      {/* Bottom Navigation */}
-      
     </div>
   );
 }

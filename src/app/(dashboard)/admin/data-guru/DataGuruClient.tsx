@@ -44,7 +44,7 @@ const [showEditForm, setShowEditForm] = useState(false);
       <div className="grid grid-cols-1 gap-1 px-1">
         {filtered.length > 0 ? (
           filtered.map((teacher: any) => (
-            <div key={teacher.id} className="bg-gradient-to-r from-cyan-300 to-fuchsia-100  p-1 rounded-lg border border-slate-100 shadow-sm flex items-center justify-between hover:border-fuchsia-200 transition-all">
+            <div key={teacher.id} className="bg-gradient-to-r from-cyan-50 to-slate-100  p-1 rounded-lg border border-slate-100 shadow-sm flex items-center justify-between hover:border-fuchsia-200 transition-all">
               <div className="flex items-center gap-3">
                 {/* Avatar Section */}
                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-slate-400 overflow-hidden shadow-inner border border-slate-100">

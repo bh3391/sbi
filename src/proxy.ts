@@ -1,9 +1,10 @@
+// src/middleware.ts
 import NextAuth from "next-auth";
 import { authConfig } from "@/lib/auth.config";
 
-// Gunakan authConfig yang tidak mengandung Prisma
+// Inisialisasi Auth khusus untuk Middleware
 export default NextAuth(authConfig).auth;
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/admin/:path*", "/guru/:path*"],
 };

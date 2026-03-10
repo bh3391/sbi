@@ -79,7 +79,7 @@ export default function AttendanceSheet({ schedule, teacherId, onClose }: any) {
     <motion.div 
       initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
       transition={{ type: "spring", damping: 25, stiffness: 200 }}
-      className="fixed inset-0 z-[100] bg-white flex flex-col h-screen"
+      className="fixed inset-0 z-[100] max-w-lg mx-auto bg-white flex flex-col h-screen"
     >
       {/* Header */}
       <header className="p-5 border-b bg-slate-900 text-white flex justify-between items-center shadow-lg sticky top-0 z-10">
