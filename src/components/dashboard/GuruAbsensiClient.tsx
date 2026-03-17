@@ -19,6 +19,8 @@ import { handleTeacherCheckIn, handleTeacherCheckOut, handleSubmitLeave } from "
 import DashboardHeader from "./header";
 import { StudentAttendanceDrawer } from "./StudentAttendanceDrawer";
 import { Toaster, toast } from "sonner";
+import { getStudentLogs } from "@/app/actions/attendance";
+import StudentLogModal from "@/components/dashboard/StudentLogModal";
 
 
 interface Props {
@@ -39,6 +41,11 @@ export default function GuruAbsensiClient({ initialData }: Props) {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [showStudentDrawer, setShowStudentDrawer] = useState(false);
+  const [selectedStudentForLog, setSelectedStudentForLog] = useState<any>(null);
+  const [studentLogs, setStudentLogs] = useState<any[]>([]);
+  const [isLogLoading, setIsLogLoading] = useState(false);
+  const [startDateState, setStartDateState] = useState<string>("");
+  const [endDateState, setEndDateState] = useState<string>("");
 
   const { profile, personalAttendance = [], pendingTasks = [] } = initialData || {};
   const months = [
@@ -52,6 +59,16 @@ const filteredAttendance = personalAttendance.filter((log) => {
   return logDate.getMonth() === selectedMonth && logDate.getFullYear() === selectedYear;
 });
 
+const fetchLogs = async (studentId: string) => {
+  setIsLogLoading(true);
+  try {
+    const res = await getStudentLogs(studentId); // Fungsi getStudentLogs yang kita buat sebelumnya
+    if (res.success) setStudentLogs(res.data);
+  } finally {
+    setIsLogLoading(false);
+  }
+};
+
   // Deteksi jika sudah check-in hari ini
   const todayStr = new Date().toLocaleDateString('en-CA');
   const activeAttendance = personalAttendance.find(log => 
@@ -63,57 +80,98 @@ const filteredAttendance = personalAttendance.filter((log) => {
   // Handler Scanner
   useEffect(() => {
   let scanner: any;
+
   if (showScanner) {
-    scanner = new Html5QrcodeScanner("reader", { 
-      fps: 10, 
-      qrbox: { width: 250, height: 250 },
-      aspectRatio: 1.0
-    }, false);
-
-    scanner.render(async (decodedText: string) => {
-      // 1. Hentikan scanner segera setelah QR terdeteksi agar tidak double scan
-      scanner.clear();
-      setShowScanner(false);
-      setLoading(true);
-
-      // 2. Ambil Lokasi GPS
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const coords = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          };
-
-          // 3. Gunakan toast.promise untuk feedback proses Check-In/Out
-          const attendanceAction = !isCheckedIn 
-            ? handleTeacherCheckIn(decodedText, coords) 
-            : handleTeacherCheckOut();
-
-          toast.promise(attendanceAction, {
-            loading: !isCheckedIn ? 'Sedang memproses Check-In...' : 'Sedang memproses Check-Out...',
-            success: (res: any) => {
-              if (res.success) {
-                return res.message || (!isCheckedIn ? "Berhasil Absen Masuk!" : "Berhasil Absen Pulang!");
-              } else {
-                // Lempar error jika server mengirim success: false
-                throw new Error(res.message);
-              }
-            },
-            error: (err) => err.message || "Terjadi kesalahan sistem",
-            finally: () => setLoading(false)
-          });
-        },
-        (err) => {
-          toast.error("Akses Lokasi Ditolak", {
-            description: "Izin lokasi diperlukan untuk validasi absensi."
-          });
-          setLoading(false);
+    // Menggunakan Html5QrcodeScanner dengan konfigurasi tambahan
+    scanner = new Html5QrcodeScanner(
+      "reader",
+      {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0,
+        // MENAMBAHKAN INI: Meminta browser mengutamakan kamera belakang (environment)
+        videoConstraints: {
+          facingMode: { ideal: "environment" }
         }
-      );
-    }, (err: any) => {});
+      },
+      /* verbose= */ false
+    );
+
+    scanner.render(
+      async (decodedText: string) => {
+        // 1. Hentikan scanner segera agar tidak terjadi double scan
+        try {
+          await scanner.clear();
+        } catch (err) {
+          console.error("Gagal menghentikan scanner:", err);
+        }
+        
+        setShowScanner(false);
+        setLoading(true);
+
+        // 2. Ambil Lokasi GPS dengan Timeout (agar tidak loading selamanya)
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const coords = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            };
+
+            // 3. Tentukan Aksi (Check-In atau Check-Out)
+            // Pastikan fungsi ini didefinisikan di luar useEffect atau di-memoize
+            const attendanceAction = !isCheckedIn 
+              ? handleTeacherCheckIn(decodedText, coords) 
+              : handleTeacherCheckOut();
+
+            toast.promise(attendanceAction, {
+              loading: !isCheckedIn ? 'Sedang memproses Check-In...' : 'Sedang memproses Check-Out...',
+              success: (res: any) => {
+                setLoading(false); // <--- Matikan loading di sini
+                if (res.success) {
+                  return res.message || (!isCheckedIn ? "Berhasil Absen Masuk!" : "Berhasil Absen Pulang!");
+                } else {
+                  throw new Error(res.message);
+                }
+              },
+              error: (err) => {
+                setLoading(false); // <--- Matikan loading juga di sini
+                return err.message || "Terjadi kesalahan sistem";
+              },
+              // Hapus blok finally: () => ... karena memang tidak didukung oleh return type toast.promise
+            });
+          },
+          (err) => {
+            // Penanganan error GPS yang lebih spesifik
+            let msg = "Akses Lokasi Ditolak";
+            if (err.code === 3) msg = "Waktu pengambilan lokasi habis (Timeout)";
+            
+            toast.error(msg, {
+              description: "Izin lokasi aktif diperlukan untuk validasi absensi."
+            });
+            setLoading(false);
+          },
+          { 
+            enableHighAccuracy: true, // Akurasi tinggi (GPS) bukan cuma Tower/WiFi
+            timeout: 10000,           // Batas waktu 10 detik
+            maximumAge: 0             // Selalu ambil lokasi terbaru, bukan cache
+          }
+        );
+      },
+      (err: any) => {
+        // Callback saat QR tidak ditemukan di frame tertentu (abaikan/silent)
+      }
+    );
   }
-  return () => { if (scanner) scanner.clear(); };
-}, [showScanner, isCheckedIn]);
+
+  // Cleanup function saat komponen unmount atau modal ditutup
+  return () => {
+    if (scanner) {
+      scanner.clear().catch((error: any) => {
+        console.error("Cleanup error:", error);
+      });
+    }
+  };
+}, [showScanner, isCheckedIn, handleTeacherCheckIn, handleTeacherCheckOut]);
 
   const onLeaveSubmit = async () => {
   // Validasi awal tetap ada agar tidak memicu toast loading jika data kosong
@@ -148,6 +206,30 @@ const filteredAttendance = personalAttendance.filter((log) => {
     },
   });
 };
+const summary = filteredAttendance.reduce((acc, log) => {
+  const type = log.type?.toUpperCase();
+  const status = log.status?.toUpperCase();
+
+  // 1. Hitung Berdasarkan Type
+  if (type === 'HADIR' || type === 'PRESENT') {
+    acc.attend++;
+    
+    // 2. Jika Hadir, cek apakah telat atau tepat waktu
+    if (status === 'LATE') {
+      acc.late++;
+    } else {
+      acc.onTime++;
+    }
+  } 
+  else if (type === 'IZIN' || type === 'SAKIT' || type === 'LEAVE') {
+    acc.leave++;
+  } 
+  else if (type === 'ALPHA' || type === 'ABSENT') {
+    acc.alpha++;
+  }
+
+  return acc;
+}, { onTime: 0, late: 0, leave: 0, alpha: 0, attend: 0 });
 
   return (
     <div className="h-screen bg-transparent  font-sans">
@@ -269,13 +351,13 @@ const filteredAttendance = personalAttendance.filter((log) => {
       </section>
       {/* MODAL FULL HISTORY */}
     {showAllHistory && (
-    <div className="fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm flex items-end justify-center">
-        <div className="bg-cyan-50 w-full h-[100vh] rounded-t-[2rem] flex flex-col animate-in slide-in-from-bottom duration-300">
+    <div className="fixed inset-0 z-[110] max-w-lg mx-auto mx-1  bg-slate-900/60 backdrop-blur-sm flex items-end justify-center">
+        <div className="bg-cyan-50 w-full h-[90vh] rounded-t-[2rem] flex flex-col animate-in slide-in-from-bottom duration-300">
         
         {/* HEADER & CLOSE */}
-        <div className="p-6 pb-2 flex justify-between items-start">
+        <div className="p-6 pb-2 flex justify-between  items-start">
             <div>
-            <h2 className="text-lg font-black text-slate-900 uppercase tracking-tighter">Rekap Absensi</h2>
+            <h2 className="text-lg font-bold text-slate-900 uppercase tracking-tighter">Rekap Absensi</h2>
             <p className="text-[9px] font-bold text-cyan-600 uppercase tracking-[0.2em]">{profile?.name}</p>
             </div>
             <button onClick={() => setShowAllHistory(false)} className="h-10 w-10 bg-fuchsia-500 rounded-full flex items-center justify-center text-white"><X size={20}/></button>
@@ -310,7 +392,7 @@ const filteredAttendance = personalAttendance.filter((log) => {
         <div className="flex-1 overflow-y-auto px-1 pb-10">
             <div className="divide-y divide-slate-50">
             {filteredAttendance.length > 0 ? filteredAttendance.map((log) => (
-                <div key={log.id} className="flex justify-between items-center hover:bg-cyan-500 border-b border-cyan-100 px-4  h-[60px]">
+                <div key={log.id} className="flex justify-between items-center hover:bg-cyan-100 border-b border-cyan-100 px-4  h-[60px]">
                 <div className="space-y-0.5">
                     <p className="text-[11px] font-black text-slate-900 uppercase">
                     {new Date(log.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}
@@ -345,11 +427,48 @@ const filteredAttendance = personalAttendance.filter((log) => {
 
       {/* FOOTER TOTAL (Opsional) */}
       {filteredAttendance.length > 0 && (
-        <div className="p-6 bg-fuchsia-500 text-white flex justify-between items-center rounded-t-[2rem]">
-          <span className="text-[10px] font-black uppercase tracking-widest">Total Kehadiran</span>
-          <span className="text-xl font-black">{filteredAttendance.length} <small className="text-[10px] opacity-70">HARI</small></span>
-        </div>
-      )}
+              <div className="p-6 bg-cyan-800 text-white rounded-t-[2.5rem] shadow-2xl space-y-4">
+                {/* Baris Atas: Grid Ringkasan Utama */}
+                <div className="grid grid-cols-4 gap-2">
+                  <div className="bg-white/5 p-2 rounded-xl border border-white/5 text-center">
+                    <p className="text-[6px] font-black uppercase tracking-widest text-emerald-400 mb-1">On Time</p>
+                    <p className="text-sm font-black">{summary.onTime}</p>
+                  </div>
+                  <div className="bg-white/5 p-2 rounded-xl border border-white/5 text-center">
+                    <p className="text-[6px] font-black uppercase tracking-widest text-amber-400 mb-1">Late</p>
+                    <p className="text-sm font-black">{summary.late}</p>
+                  </div>
+                  <div className="bg-white/5 p-2 rounded-xl border border-white/5 text-center">
+                    <p className="text-[6px] font-black uppercase tracking-widest text-blue-400 mb-1">Izin/Sakit</p>
+                    <p className="text-sm font-black">{summary.leave}</p>
+                  </div>
+                  <div className="bg-white/5 p-2 rounded-xl border border-white/5 text-center">
+                    <p className="text-[6px] font-black uppercase tracking-widest text-rose-400 mb-1">Alpha</p>
+                    <p className="text-sm font-black">{summary.alpha}</p>
+                  </div>
+                </div>
+
+                {/* Baris Tengah: Progress Bar Visual */}
+                <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden flex">
+                  <div style={{ width: `${(summary.onTime / filteredAttendance.length) * 100}%` }} className="bg-emerald-500 h-full" />
+                  <div style={{ width: `${(summary.late / filteredAttendance.length) * 100}%` }} className="bg-amber-500 h-full" />
+                  <div style={{ width: `${(summary.leave / filteredAttendance.length) * 100}%` }} className="bg-blue-500 h-full" />
+                  <div style={{ width: `${(summary.alpha / filteredAttendance.length) * 100}%` }} className="bg-rose-500 h-full" />
+                </div>
+
+                {/* Baris Bawah: Total */}
+                <div className="flex justify-between items-center pt-2 border-t border-white/10">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-50">Total Kehadiran</span>
+                    <p className="text-[8px] text-emerald-400 font-bold uppercase">{summary.attend} Hari Berhasil Absen</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-2xl font-black text-white leading-none">{filteredAttendance.length}</span>
+                    <span className="text-[10px] font-bold text-slate-50 uppercase ml-1">Hari</span>
+                  </div>
+                </div>
+              </div>
+            )}
             </div>
     </div>
         )}
@@ -375,10 +494,19 @@ const filteredAttendance = personalAttendance.filter((log) => {
                       {task.processStatus}
                     </span>
                   </td>
+                  
                   <td className="px-4 py-4 text-right">
-                    <button className="h-9 w-9 bg-slate-900 text-white rounded-xl inline-flex items-center justify-center active:scale-90 transition-all">
-                      <UserCheck size={16} />
-                    </button>
+                    <button 
+                      onClick={() => {
+                        setSelectedStudentForLog(task.student);
+                        fetchLogs(task.student.id);
+                      }}
+                      className="h-9 w-9 bg-cyan-50 text-cyan-600 rounded-xl inline-flex items-center justify-center active:scale-90 transition-all border border-cyan-100 hover:bg-cyan-100"
+                    >
+                      <Clock size={16} /> 
+                    </button> 
+
+                    
                   </td>
                 </tr>
               )) : (
@@ -397,10 +525,15 @@ const filteredAttendance = personalAttendance.filter((log) => {
       </section>
               
         <StudentAttendanceDrawer 
+        tasks={pendingTasks}
         isOpen={showStudentDrawer}
         onClose={() => setShowStudentDrawer(false)}
-        tasks={pendingTasks}
-        />
+        onOpenLog={(student) => {
+          setSelectedStudentForLog(student); // State di parent
+          fetchLogs(student.id);             // Fungsi fetch log di parent
+        }}
+      />
+        
 
       {/* MODAL PENGAJUAN IZIN */}
       {showLeaveModal && (
@@ -445,6 +578,23 @@ const filteredAttendance = personalAttendance.filter((log) => {
         </div>
       )}
       <div className="h-24 bg-gradient-to-b from-cyan-100 to-fuchsia-100" /> {/* Spacer untuk scrollable content */}
+            {selectedStudentForLog && (
+        <StudentLogModal
+          student={selectedStudentForLog}
+          logs={studentLogs}
+          isLoading={isLogLoading}
+          onClose={() => setSelectedStudentForLog(null)}
+          refreshLogs={() => fetchLogs(selectedStudentForLog.id)}
+          // Pastikan dateRange dikelola dengan state jika ingin filter tanggal berfungsi
+          dateRange={{
+            startDate: startDateState,
+            setStartDate: setStartDateState,
+            endDate: endDateState,
+            setEndDate: setEndDateState
+          }}
+          onFilter={() => fetchLogs(selectedStudentForLog.id)}
+        />
+      )}
     </div>
   );
 }

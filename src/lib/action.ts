@@ -1,6 +1,6 @@
 "use server"
 
-import { signIn } from "@/lib/auth"
+import { signIn, signOut } from "@/lib/auth"
 import { AuthError } from "next-auth"
 import  prisma  from "@/lib/prisma" // Pastikan prisma diimport
 
@@ -40,4 +40,7 @@ export async function authenticate(formData: FormData) {
     // WAJIB dilempar agar proses redirect internal NextAuth tidak terhenti
     throw error;
   }
+}
+export async function handleSignOut() {
+  await signOut({ redirectTo: "/" });
 }

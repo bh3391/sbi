@@ -161,3 +161,46 @@ export async function deleteSchedule(id: string) {
     return { error: "Gagal menghapus jadwal." };
   }
 }
+
+export async function getCurrentDayName() {
+  return new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(new Date());
+}
+
+export async function getTeacherAgenda(teacherId: string) {
+  try {
+
+    const today = await getCurrentDayName();
+    const schedules = await prisma.schedule.findMany({
+      where: { 
+        teacherId: teacherId,
+        day: today // Optional: filter berdasarkan hari ini jika perlu
+        // Optional: filter berdasarkan hari ini jika perlu
+        
+      },
+      include: {
+        session: true,
+        room: true,
+        subject: true,
+        // KUNCI UTAMA: Ambil data murid
+        students: {
+          select: {
+            id: true,
+            fullName: true,
+            nickname: true,
+            imageProfile: true,
+          }
+        }
+      },
+      orderBy: {
+        session: {
+          startTime: 'asc'
+        }
+      }
+    });
+
+    return { success: true, data: schedules };
+  } catch (error) {
+    console.error("GET_AGENDA_ERROR:", error);
+    return { success: false, error: "Gagal mengambil agenda" };
+  }
+}

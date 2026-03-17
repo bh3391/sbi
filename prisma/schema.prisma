@@ -68,8 +68,8 @@ model Student {
   locationId    String
   attendances   AttendanceLog[]
   location      Location        @relation(fields: [locationId], references: [id])
-  payments      Payment[]
-  schedules Schedule[]
+  Payment[]     @relation("StudentPayments")
+  schedules     Schedule[]
 }
 model Schedule {
   id        String   @id @default(cuid())
@@ -191,7 +191,7 @@ model Payment {
 
   // Relasi ke Siswa
   studentId String
-  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student   Student[] @relation("StudentPayments")
 
   // Detail Pembayaran
   amount Float // Nilai tagihan

@@ -82,20 +82,20 @@ export default function AttendanceSheet({ schedule, teacherId, onClose }: any) {
       className="fixed inset-0 z-[100] max-w-lg mx-auto bg-white flex flex-col h-screen"
     >
       {/* Header */}
-      <header className="p-5 border-b bg-slate-900 text-white flex justify-between items-center shadow-lg sticky top-0 z-10">
+      <header className="p-5 border-b bg-cyan-500 text-white flex justify-between items-center shadow-lg sticky top-0 z-10">
         <div>
-          <h2 className="text-xs font-black uppercase italic tracking-wider">Laporan Mengajar</h2>
-          <p className="text-[10px] text-cyan-400 font-bold uppercase mt-0.5">
+          <h2 className="text-xs font-bold uppercase italic tracking-wider">Laporan Mengajar</h2>
+          <p className="text-[10px] text-white font-bold uppercase mt-0.5">
             {schedule.subject.name} • {schedule.session.name}
           </p>
         </div>
-        <button onClick={onClose} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors">
+        <button onClick={onClose} className="p-2 bg-fuchsia-500 rounded-full hover:bg-white/20 transition-colors">
           <X size={20} />
         </button>
       </header>
 
       {/* List Siswa */}
-      <main className="flex-1 overflow-y-auto p-4 space-y-4 pb-28 bg-[#F8FAFC]">
+      <main className="flex-1 overflow-y-auto p-4 space-y-4 pb-28 bg-cyan-50">
         {attendanceList.map((item: any) => {
           const isHadir = item.status === "HADIR";
           const isReschedulable = item.status === "IZIN" || item.status === "SAKIT";
@@ -225,7 +225,7 @@ export default function AttendanceSheet({ schedule, teacherId, onClose }: any) {
         <button 
           onClick={handleSave}
           disabled={isSubmitting}
-          className="w-full py-5 bg-slate-900 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-50"
+          className="w-full py-3 bg-fuchsia-500 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-50"
         >
           {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <><Check size={18} strokeWidth={3} /><span>Simpan Absensi</span></>}
         </button>

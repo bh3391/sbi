@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { sendFonneNotification } from "@/lib/fonnte";
 import { auth } from "@/lib/auth";
-
+import { StudentStatus } from "@prisma/client";
 
 export async function getAllStudents() {
   try {
@@ -38,22 +38,25 @@ export async function getAllStudents() {
 export async function createStudent(formData: any) {
   const session = await auth();
   const currentUserId = session?.user?.id;
+  const REG_FEE = 150000; // Biaya Pendaftaran Tetap
+
   try {
-    // 1. Ambil data referensi paket terlebih dahulu
+    // 1. Ambil data paket
     const pkg = await prisma.package.findUnique({
       where: { id: formData.packageId }
     });
     
     if (!pkg) throw new Error("Paket tidak ditemukan");
 
-    // 2. Gunakan TRANSACTION untuk Database
-    // Jika ada error di dalam sini, Student dan Payment TIDAK AKAN tersimpan
-    const transactionResult = await prisma.$transaction(async (tx) => {
-  // 1. Tentukan jumlah sesi awal berdasarkan metode pembayaran
-  // Jika Cash, langsung beri sesi dari paket. Jika Transfer, mulai dari 0.
-      const initialSesi = formData.method === "CASH" ? pkg.sesiCredit : 0;
-      const paymentMethod = formData.method || "TRANSFER";
+    // Total yang harus dibayar (Paket + Registrasi)
+    const totalInitialAmount = Number(pkg.price) + REG_FEE;
 
+    const transactionResult = await prisma.$transaction(async (tx) => {
+      // Sesi hanya diberikan langsung jika bayar CASH
+      const initialSesi = formData.method === "CASH" ? pkg.sesiCredit : 0;
+      const paymentStatus = formData.method === "CASH" ? "SUCCESS" : "PENDING";
+
+      // 1. Buat Data Siswa
       const student = await tx.student.create({
         data: {
           fullName: formData.fullName,
@@ -64,74 +67,48 @@ export async function createStudent(formData: any) {
           packageId: formData.packageId,
           subjectId: formData.subjectId,
           status: "NEWSTUDENT",
-          // Logika Sesi Disini
           remainingSesi: initialSesi, 
         },
       });
 
+      // 2. Buat Satu Record Pembayaran Gabungan
       await tx.payment.create({
         data: {
           studentId: student.id,
-          amount: pkg.price,
-          // Jika Cash, anggap sudah lunas (SUCCESS/PAID). Jika Transfer, PENDING.
-          status: formData.method === "CASH" ? "SUCCESS" : "PENDING",
-          category: "REGISTRATION",
-          notes: "NEWSTUDENT",
-          method: paymentMethod, // Ambil dari formData (CASH atau TRANSFER) default TRANSFER
+          amount: totalInitialAmount, // Nominal Gabungan
+          status: paymentStatus,
+          category: "REGISTRATION", // Tetap kategori REGISTRATION karena ini pendaftaran awal
+          method: formData.method || "TRANSFER",
+          notes: `PENDAFTARAN + PAKET ${pkg.name.toUpperCase()}`,
           createdById: currentUserId || null,
         }
       });
 
-      return student;
+      return { student, totalAmount: totalInitialAmount };
     });
 
-    // 3. KIRIM WA HANYA JIKA TRANSACTION DI ATAS BERHASIL
-    // Taruh di luar block try jika ingin memastikan database aman dulu
+    // --- NOTIFIKASI WHATSAPP ---
     if (transactionResult) {
-      // 1. Pengaturan Data Bank (Sesuaikan dengan rekening kamu)
-      const bankInfo = {
-        nama: "BCA",
-        nomor: "1234567890",
-        pemilik: "ADMIN BIMBEL CERDAS"
-      };
-
-      // 2. Notifikasi WhatsApp ke ADMIN
-      const adminMsg = 
-        `*🔔 PENDAFTARAN SISWA BARU*\n\n` +
-        `Telah masuk pendaftaran baru:\n` +
-        `• *Nama:* ${transactionResult.fullName}\n` +
-        `• *Ortu:* ${transactionResult.parentName}\n` +
-        `• *Paket:* ${pkg.name}\n` +
-        `• *Tagihan:* Rp ${pkg.price.toLocaleString('id-ID')}\n\n` +
-        `Silakan cek dashboard untuk verifikasi pembayaran.`;
-
-      await sendFonneNotification(
-        process.env.ADMIN_PHONE_NUMBER || "6289670431969",
-        adminMsg
-      );
-
-      // 3. Notifikasi WhatsApp ke ORANG TUA
-      if (transactionResult.parentContact) {
+      const { student, totalAmount } = transactionResult;
+      
+      // Notifikasi Ortu (Dibuat sangat jelas rinciannya agar tidak bingung)
+      if (student.parentContact) {
         const parentMsg = 
-          `Halo Ayah/Bunda *${transactionResult.parentName}*,\n\n` +
-          `Pendaftaran Ananda *${transactionResult.fullName}* telah kami terima. ✨\n\n` +
-          `*DETAIL TAGIHAN:*\n` +
+          `Halo Ayah/Bunda *${student.parentName}*,\n\n` +
+          `Pendaftaran Ananda *${student.fullName}* berhasil kami catat. ✨\n\n` +
+          `*DETAIL PEMBAYARAN:*\n` +
           `--------------------------------\n` +
-          `• Paket: ${pkg.name}\n` +
-          `• Total Tagihan: *Rp ${pkg.price.toLocaleString('id-ID')}*\n` +
+          `• Biaya Registrasi : Rp ${REG_FEE.toLocaleString('id-ID')}\n` +
+          `• Paket ${pkg.name} : Rp ${pkg.price.toLocaleString('id-ID')}\n` +
+          `--------------------------------\n` +
+          `*TOTAL TRANSFER : Rp ${totalAmount.toLocaleString('id-ID')}*\n` +
           `--------------------------------\n\n` +
-          `*INSTRUKSI PEMBAYARAN:*\n` +
-          `Mohon selesaikan transfer ke rekening berikut:\n\n` +
-          `🏦 *Bank ${bankInfo.nama}*\n` +
-          `💳 No. Rek: *${bankInfo.nomor}*\n` +
-          `👤 A/N: *${bankInfo.pemilik}*\n\n` +
-          `Setelah transfer, silakan kirimkan *Bukti Bayar* dengan membalas pesan ini untuk aktivasi sesi belajar Ananda.\n\n` +
-          `Terima kasih! 🙏`;
+          `*TRANSFER KE REKENING:*\n` +
+          `🏦 *BCA - 1234567890*\n` +
+          `👤 *A/N ADMIN BIMBEL*\n\n` +
+          `Mohon kirimkan *Bukti Transfer* untuk aktivasi akun Ananda. Terima kasih! 🙏`;
 
-        await sendFonneNotification(
-          transactionResult.parentContact,
-          parentMsg
-        );
+        await sendFonneNotification(student.parentContact, parentMsg);
       }
     }
 
@@ -139,12 +116,8 @@ export async function createStudent(formData: any) {
     return { success: true };
 
   } catch (error) {
-    // Jika ada error di langkah mana pun, kode di bawah ini yang jalan
-    console.error("Critical Error during registration:", error);
-    return { 
-      success: false, 
-      message: error instanceof Error ? error.message : "Gagal mendaftarkan siswa" 
-    };
+    console.error("Registration Error:", error);
+    return { success: false, message: "Gagal mendaftarkan siswa" };
   }
 }
 
@@ -187,5 +160,45 @@ export async function getFormDataReferences() {
       subjects: [], 
       success: false 
     };
+  }
+}
+
+export async function updateStudent(id: string, formData: any) {
+  try {
+    await prisma.student.update({
+      where: { id },
+      data: {
+        fullName: formData.fullName,
+        nickname: formData.nickname,
+        parentName: formData.parentName,
+        parentContact: formData.parentContact,
+        locationId: formData.locationId,
+        packageId: formData.packageId,
+        subjectId: formData.subjectId,
+        status: formData.status, // Penting untuk bisa ubah status ke SUSPEND/ACTIVE
+        remainingSesi: formData.remainingSesi, // Memungkinkan admin koreksi sesi
+      },
+    });
+
+    revalidatePath("/admin/data-siswa");
+    return { success: true, message: "Data siswa berhasil diperbarui" };
+  } catch (error) {
+    console.error("Update Student Error:", error);
+    return { success: false, message: "Gagal memperbarui data siswa" };
+  }
+}
+
+export async function updateStudentStatus(studentId: string, newStatus: string) {
+  try {
+    await prisma.student.update({
+      where: { id: studentId },
+      data: { status: newStatus as StudentStatus },
+    });
+
+    revalidatePath("/admin/data-siswa");
+    return { success: true };
+  } catch (error) {
+    console.error("UPDATE_STATUS_ERROR:", error);
+    return { success: false, message: "Gagal memperbarui status" };
   }
 }

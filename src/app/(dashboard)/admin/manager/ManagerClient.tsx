@@ -8,18 +8,26 @@ import {
 } from "lucide-react";
 import { createRoom, createLocation, createStudentSession, createSubject, deleteLocation, deleteStudentSession,deleteSubject, deleteRoom } from "@/app/actions/manager";
 import DashboardHeader from "@/components/dashboard/header";
+import { createPackage, deletePackage, updatePackage } from "@/app/actions/package";
 
-export default function ManagerClient({ initialLocations, initialSessions, initialSubjects }: any) {
+export default function ManagerClient({ initialLocations, initialSessions, initialSubjects, initialPackages }: any) {
   const [activeTab, setActiveTab] = useState("lokasi");
   const [isPending, setIsPending] = useState(false);
   
   // Modal States
   const [modal, setModal] = useState<{ type: string | null }>({ type: null });
-
-  const closeModal = () => {
-    setModal({ type: null });
-    setIsPending(false);
+  const [editingPackage, setEditingPackage] = useState<any>(null);
+  const openEditModal = (pkg: any) => {
+  setEditingPackage(pkg);
+  setModal({ type: 'edit-package' });
   };
+  const closeModal = () => {
+  setModal({ type: null });
+  setEditingPackage(null); // Reset data edit
+  setIsPending(false);
+};
+
+  
   const [expandedLocation, setExpandedLocation] = useState<string | null>(null);
 
     const toggleLocation = (id: string) => {
@@ -52,7 +60,7 @@ export default function ManagerClient({ initialLocations, initialSessions, initi
       <div className=" p-2 border-b border-slate-100 shadow-sm sticky top-0 z-30">
         <DashboardHeader title="Manajemen Master"  />
         <div className="flex gap-2 mt-2 p-1 bg-slate-50 rounded-2xl">
-          {['lokasi', 'sesi', 'mapel'].map((tab) => (
+          {['lokasi', 'sesi', 'mapel', 'package'].map((tab) => (
             <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${activeTab === tab ? "bg-cyan-500 text-white shadow-sm" : "text-slate-400"}`}>{tab}</button>
           ))}
         </div>
@@ -165,6 +173,77 @@ export default function ManagerClient({ initialLocations, initialSessions, initi
               ))}
             </motion.div>
           )}
+          {activeTab === "package" && (
+  <motion.div 
+    key="package" 
+    initial={{ opacity: 0, y: 10 }} 
+    animate={{ opacity: 1, y: 0 }} 
+    className="space-y-3"
+  >
+    {/* Tombol Tambah Paket */}
+    <button 
+      onClick={() => setModal({ type: 'package' })} 
+      className="w-full bg-fuchsia-600 text-white py-4 rounded-3xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-fuchsia-100 active:scale-95 transition-transform"
+    >
+      <Plus size={16} /> Buat Paket Baru
+    </button>
+
+    {/* List Paket */}
+    <div className="space-y-2">
+      {initialPackages.map((pkg: any) => (
+        <div 
+          key={pkg.id} 
+          className="bg-white p-3 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm hover:border-cyan-200 transition-colors group"
+        >
+          {/* Area Klik untuk Edit */}
+          <div 
+            className="flex items-center gap-4 flex-1 cursor-pointer" 
+            onClick={() => openEditModal(pkg)}
+          >
+            <div className="h-10 w-10 bg-fuchsia-50 text-fuchsia-500 rounded-xl flex items-center justify-center group-hover:bg-cyan-50 group-hover:text-cyan-500 transition-colors">
+              <Clock size={20} />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-slate-800 uppercase leading-none">
+                {pkg.name}
+              </h3>
+              <p className="text-[10px] font-bold text-slate-400 mt-1.5 flex items-center gap-2">
+                <span className="text-cyan-600">Rp {pkg.price?.toLocaleString('id-ID')}</span>
+                <span className="text-slate-300">•</span>
+                <span>{pkg.sesiCredit} Sesi</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-1">
+            <button 
+              onClick={() => openEditModal(pkg)} 
+              className="p-2 text-slate-300 hover:text-cyan-500 hover:bg-cyan-50 rounded-lg transition-all"
+              title="Edit Paket"
+            >
+              <Plus size={18} className="rotate-45" /> 
+            </button>
+            <button 
+              onClick={() => handleDelete(pkg.id, pkg.name, deletePackage)} 
+              className="p-2 text-slate-200 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
+              title="Hapus Paket"
+            >
+              <Trash2 size={18}/>
+            </button>
+          </div>
+        </div>
+      ))}
+
+      {/* Empty State */}
+      {initialPackages.length === 0 && (
+        <div className="text-center py-10 border-2 border-dashed border-slate-200 rounded-[2.5rem]">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Belum ada paket tersedia</p>
+        </div>
+      )}
+    </div>
+  </motion.div>
+)}
 
           {/* TAB MAPEL */}
           {activeTab === "mapel" && (
@@ -230,6 +309,79 @@ export default function ManagerClient({ initialLocations, initialSessions, initi
                   <h2 className="text-xl font-black text-slate-900 uppercase italic mb-4">Mata Pelajaran</h2>
                   <input name="name" placeholder="Contoh: Matematika" className="w-full bg-slate-50 border border-slate-100 px-5 py-4 rounded-2xl text-xs font-bold" required />
                   <button disabled={isPending} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-[10px] uppercase italic tracking-widest">Simpan Mapel</button>
+                </form>
+              )}
+              {modal.type === 'package' && (
+                <form onSubmit={(e) => handleAction(e, createPackage)} className="space-y-3">
+                  <h2 className="text-xl font-black text-fuchsia-600 uppercase italic mb-4">Buat Paket Kursus</h2>
+                  
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Nama Paket</label>
+                    <input name="name" placeholder="Contoh: Paket 10 Sesi" className="w-full bg-slate-50 border border-slate-100 px-5 py-3.5 rounded-2xl text-xs font-bold" required />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Jumlah Sesi</label>
+                      <input name="sesiCredit" type="number" placeholder="10" className="w-full bg-slate-50 border border-slate-100 px-5 py-3.5 rounded-2xl text-xs font-bold" required />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Harga (IDR)</label>
+                      <input name="price" type="number" placeholder="500000" className="w-full bg-slate-50 border border-slate-100 px-5 py-3.5 rounded-2xl text-xs font-bold" required />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Keterangan Singkat</label>
+                    <textarea name="description" placeholder="Deskripsi paket..." className="w-full bg-slate-50 border border-slate-100 px-5 py-3.5 rounded-2xl text-xs font-bold h-20 resize-none" />
+                  </div>
+
+                  <button disabled={isPending} className="w-full bg-fuchsia-600 text-white py-4 mt-2 rounded-2xl font-black text-[10px] uppercase shadow-lg shadow-fuchsia-100 transition-all active:scale-95">
+                    {isPending ? <Loader2 className="animate-spin mx-auto"/> : "Simpan Paket"}
+                  </button>
+                </form>
+              )}
+              {modal.type === 'edit-package' && editingPackage && (
+                <form 
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    setIsPending(true);
+                    const formData = new FormData(e.currentTarget);
+                    // Memanggil handleAction dengan fungsi anonim agar bisa mengirim ID
+                    handleAction(e, () => updatePackage(editingPackage.id, formData));
+                  }} 
+                  className="space-y-3"
+                >
+                  <h2 className="text-xl font-black text-cyan-600 uppercase italic mb-4">Edit Paket</h2>
+                  
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Nama Paket</label>
+                    <input name="name" defaultValue={editingPackage.name} className="w-full bg-slate-50 border border-slate-100 px-5 py-3.5 rounded-2xl text-xs font-bold" required />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Sesi</label>
+                      <input name="sesiCredit" type="number" defaultValue={editingPackage.sesiCredit} className="w-full bg-slate-50 border border-slate-100 px-5 py-3.5 rounded-2xl text-xs font-bold" required />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Harga</label>
+                      <input name="price" type="number" defaultValue={editingPackage.price} className="w-full bg-slate-50 border border-slate-100 px-5 py-3.5 rounded-2xl text-xs font-bold" required />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Deskripsi</label>
+                    <textarea 
+                      name="description" 
+                      defaultValue={typeof editingPackage.description === 'object' ? "" : editingPackage.description} 
+                      className="w-full bg-slate-50 border border-slate-100 px-5 py-3.5 rounded-2xl text-xs font-bold h-20 resize-none" 
+                    />
+                  </div>
+
+                  <button disabled={isPending} className="w-full bg-cyan-600 text-white py-4 mt-2 rounded-2xl font-black text-[10px] uppercase shadow-lg">
+                    {isPending ? <Loader2 className="animate-spin mx-auto"/> : "Simpan Perubahan"}
+                  </button>
                 </form>
               )}
 

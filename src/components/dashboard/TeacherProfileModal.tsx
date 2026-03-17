@@ -158,14 +158,7 @@ export default function TeacherProfileModal({ teacher, onClose }: any) {
           </div>
 
           {/* Footer Actions */}
-          <div className="flex gap-3 pt-2">
-            <button className="flex-[2] bg-slate-900 text-white py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-[10pt] uppercase tracking-widest hover:bg-slate-800 active:scale-95 transition-all shadow-xl shadow-slate-200">
-              <MessageSquare size={18} /> Chat Internal
-            </button>
-            <button className="flex-1 bg-white border-2 border-slate-100 text-slate-600 py-4 rounded-2xl font-black text-[10pt] uppercase tracking-widest active:bg-slate-50 transition-all hover:border-fuchsia-200">
-              Edit
-            </button>
-          </div>
+          
         </div>
       </motion.div>
     </div>

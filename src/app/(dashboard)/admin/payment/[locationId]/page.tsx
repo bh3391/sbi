@@ -9,39 +9,49 @@ interface PageProps {
   params: Promise<{ locationId: string }>;
 }
 
-// Perbaikan: Hanya gunakan satu argumen { params }
 export default async function LocationPaymentPage({ params }: PageProps) {
   
-  // WAJIB: Unwrapped params karena di Next.js 15+ ini adalah Promise
+  // Unwrapped params untuk Next.js 15+
   const resolvedParams = await params;
   const locationId = resolvedParams.locationId;
-  const session = await auth(); // Placeholder, bisa diisi dengan session user jika diperlukan
-  const currentUserId = session?.user?.id || ""; // Placeholder, bisa diisi dengan session user jika diperlukan
-  
+  const isAll = locationId === "all"; // Cek apakah slug adalah 'all'
 
+  const session = await auth(); 
+  const currentUserId = session?.user?.id || ""; 
+
+  // 1. Ambil Data Pembayaran
   const payments = await prisma.payment.findMany({
-    where: {
-      student: {
-        locationId: locationId // Gunakan variabel yang sudah di-await
-      }
-    },
+    where: isAll 
+      ? {} // Jika 'all', ambil semua tanpa filter
+      : { student: { locationId: locationId } }, 
     include: {
-      student: true,
+      student: {
+        include: {
+          location: { select: { name: true } } // Butuh nama lokasi jika di halaman 'all'
+        }
+      },
       createdBy: {
-      select: { nickname: true } // Hanya ambil nama agar efisien
-    }
+        select: { nickname: true } 
+      }
     },
     orderBy: { createdAt: 'desc' }
   });
 
+  // 2. Ambil Data Siswa (untuk FAB)
   const students = await prisma.student.findMany({
-    where: { 
-      locationId: locationId, 
-      status: 'ACTIVE' 
-    },
+    where: isAll 
+      ? { status: 'ACTIVE' } // Semua siswa aktif dari semua lokasi
+      : { locationId: locationId, status: 'ACTIVE' },
     select: { 
         id: true, 
         fullName: true,
+        package: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+          }
+        },
         location: {
           select: {
             name: true
@@ -50,17 +60,24 @@ export default async function LocationPaymentPage({ params }: PageProps) {
     },
     orderBy: { fullName: 'asc' }
   });
-        // Tambahkan defaultPackageAmount jika ingin nominal terisi otomatis di FAB
-        // defaultPackageAmount: true 
-  
+
+  // 3. Tentukan Judul Header
+  const headerTitle = isAll 
+    ? "Semua Lokasi" 
+    : (students[0]?.location?.name || "Lokasi");
 
   return (
     <div className="min-h-screen p-1">
-      <DashboardHeader title={`Pembayaran - ${students[0]?.location?.name || "Lokasi Tidak Ditemukan"}`} />
-      <PaymentTable initialData={payments}  />
+      <DashboardHeader title={`Pembayaran - ${headerTitle}`} />
+      
+      <PaymentTable initialData={payments} />
 
       {/* Kirim locationId dan data students ke FAB */}
-      <AddPaymentFAB locationId={locationId} students={students} currentUserId={currentUserId} />
+      <AddPaymentFAB 
+        locationId={locationId} 
+        students={students} 
+        currentUserId={currentUserId} 
+      />
     </div>
   );
 }

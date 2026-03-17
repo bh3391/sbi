@@ -67,11 +67,11 @@ export default async function GuruDashboard() {
       link: "/admin/inventory"
     },
     {
-      title: "Report",
+      title: "Invoice & Report",
       desc: "Laporan & Statistik",
       icon: <ChartAreaIcon size={20} strokeWidth={2.5} />,
       color: "from-violet-500 to-sky-200",
-      link: "/admin/report"
+      link: "/admin/invoice"
     },
     {
       title: "Management",

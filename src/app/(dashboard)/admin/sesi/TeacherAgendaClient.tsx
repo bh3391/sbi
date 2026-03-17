@@ -5,14 +5,21 @@ import { Clock, Users, ChevronRight } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import AttendanceSheet from "@/components/dashboard/AttendanceSheet";
 import DashboardHeader from "@/components/dashboard/header";
-// Import action jika Anda ingin fetch data saat dropdown berubah (Opsional jika data sudah di-pass lengkap)
-// import { getTeacherAgenda } from "@/app/actions/schedules"; 
+ import { getTeacherAgenda } from "@/app/actions/schedule"; 
+ import { toast } from "sonner";
 
 interface TeacherAgendaProps {
   initialSchedules: any[];
   allTeachers: any[];
   currentUser: any;
   today: string;
+}
+interface ScheduleData {
+  id: string;
+  room: { name: string };
+  session: { name: string; startTime: string };
+  subject: { name: string };
+  students: { id: string; nickname: string; fullName: string; imageProfile: string | null }[];
 }
 
 export default function TeacherAgendaClient({ 
@@ -21,6 +28,8 @@ export default function TeacherAgendaClient({
   currentUser,
   today
 }: TeacherAgendaProps) {
+
+  
   const [selectedTeacherId, setSelectedTeacherId] = useState(currentUser.id);
   // Simpan initialSchedules ke state agar bisa diupdate jika admin memilih guru lain
   const [schedules, setSchedules] = useState(initialSchedules);
@@ -36,10 +45,20 @@ export default function TeacherAgendaClient({
   // Handler jika Admin memilih guru lain
   // Catatan: Di sini idealnya Anda memanggil server action untuk fetch jadwal guru tersebut
   const handleTeacherChange = async (teacherId: string) => {
-    setSelectedTeacherId(teacherId);
-    // Jika data initialSchedules hanya berisi jadwal guru yang login, 
-    // Anda perlu melakukan fetch ulang di sini atau redirect ke URL dengan query param baru.
-  };
+  setSelectedTeacherId(teacherId);
+  
+  const res = await getTeacherAgenda(teacherId);
+  
+  if (res.success && res.data) {
+    // Gunakan res.data as any[] jika ingin cepat, 
+    // atau pastikan res.data tidak undefined dengan []
+    setSchedules(res.data); 
+  } else {
+    // Jika gagal atau data kosong, set ke array kosong agar tidak error
+    setSchedules([]); 
+    toast.error(res.error || "Gagal memuat jadwal");
+  }
+};
 
   const todayFormatted = new Intl.DateTimeFormat('id-ID', { 
     weekday: 'long', 

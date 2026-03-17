@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth"; // Sesuaikan dengan library auth Anda
 import prisma from "@/lib/prisma";
 import TeacherAgendaClient from "./TeacherAgendaClient";
+import { getCurrentDayName } from "@/app/actions/schedule";
 
 export default async function TeacherAgendaPage() {
   const session = await auth();
@@ -19,11 +20,13 @@ export default async function TeacherAgendaPage() {
     orderBy: { nickname: 'asc' }
   });
 
+  const today = await getCurrentDayName();
   // 3. Ambil jadwal hari ini (Indonesian Day)
-  const today = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(new Date());
+  // const today = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(new Date());
 
   const initialSchedules = await prisma.schedule.findMany({
     where: {
+      // Gunakan ID pertama jika admin belum memilih guru
       teacherId: currentUser?.role === "TEACHER" ? currentUser.id : allTeachers[0]?.id,
       day: today,
     },
@@ -31,10 +34,23 @@ export default async function TeacherAgendaPage() {
       session: true,
       subject: true,
       room: true,
-      students: true,
+      // Jika relasi direct (Many-to-Many Implicit)
+      students: {
+        select: {
+          id: true,
+          nickname: true,
+          fullName: true,
+          imageProfile: true,
+        }
+      },
     },
     orderBy: { session: { startTime: 'asc' } }
   });
+
+  // Tambahkan pengecekan sederhana untuk menghindari error jika user tidak ditemukan
+  if (!currentUser) {
+    return <div className="p-10 text-center">Silahkan login kembali.</div>;
+  }
 
   return (
     <div className="min-h-screen bg-cyan-50 pb-20">

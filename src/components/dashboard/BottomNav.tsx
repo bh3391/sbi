@@ -2,6 +2,7 @@ import React from "react";
 import { auth, signOut } from "@/lib/auth";
 import { Home, User, LogOut, QrCode, Fingerprint } from "lucide-react";
 import Link from "next/link";
+import { handleSignOut } from "@/lib/action";
 
 export default async function BottomNav() {
   const session = await auth();
@@ -41,19 +42,19 @@ export default async function BottomNav() {
       <div className="h-6 w-[1px] bg-slate-100 mx-1" />
 
       {/* Tombol Logout - Compact & Clean */}
-      <form
-        action={async () => {
-          "use server";
-          await signOut({ redirectTo: "/" });
-        }}
+      <form action={handleSignOut}>
+      <button 
+        type="submit" 
+        className="flex flex-col items-center gap-0.5 group outline-none"
       >
-        <button type="submit" className="flex flex-col items-center gap-0.5 group">
-          <div className="p-2 rounded-xl text-rose-400 hover:bg-rose-50 group-active:scale-90 transition-all">
-            <LogOut size={18} strokeWidth={2.5} />
-          </div>
-          <span className="text-[7px] font-black uppercase tracking-[0.15em] text-rose-400">Exit</span>
-        </button>
-      </form>
+        <div className="p-2 rounded-xl text-rose-400 hover:bg-rose-50 group-active:scale-90 transition-all">
+          <LogOut size={18} strokeWidth={2.5} />
+        </div>
+        <span className="text-[7px] font-black uppercase tracking-[0.15em] text-rose-400">
+          Exit
+        </span>
+      </button>
+    </form>
     </nav>
   );
 }

@@ -75,16 +75,38 @@ export async function getStudentLogs(studentId: string, startDate?: string, endD
         subject: true,
         session: true,
       },
+      // Kita tetap urutkan berdasarkan waktu terbaru sebagai cadangan
       orderBy: { createdAt: "desc" },
     });
 
-    // SELALU kembalikan objek dengan success: true dan data: [] jika kosong
+    // --- LOGIKA SORTING STATUS ---
+    // Definisikan bobot urutan: LISTED (1), SCHEDULED (2), DONE (3)
+    const statusPriority: Record<string, number> = {
+      LISTED: 1,
+      SCHEDULED: 2,
+      DONE: 3,
+    };
+
+    const sortedLogs = [...logs].sort((a, b) => {
+      // Ambil prioritas, jika status tidak terdaftar beri angka besar (99)
+      const priorityA = statusPriority[a.status] || 99;
+      const priorityB = statusPriority[b.status] || 99;
+
+      // Jika statusnya berbeda, urutkan berdasarkan LISTED -> SCHEDULED -> DONE
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+
+      // Jika statusnya SAMA, urutkan berdasarkan waktu terbaru (createdAt desc)
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
     return { 
       success: true, 
-      data: logs || [] 
+      data: sortedLogs
     };
   } catch (error) {
-    console.error(error);
+    console.error("Error fetching logs:", error);
     return { 
       success: false, 
       data: [], 

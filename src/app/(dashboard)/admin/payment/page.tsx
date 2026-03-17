@@ -1,7 +1,7 @@
 // src/app/admin/payment/page.tsx
-import  prisma  from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import Link from "next/link";
-import { MapPin, ChevronRight, Banknote } from "lucide-react";
+import { MapPin, ChevronRight, LayoutGrid } from "lucide-react"; // Import LayoutGrid untuk ikon "All"
 import DashboardHeader from "@/components/dashboard/header";
 
 export default async function SelectLocationPaymentPage() {
@@ -10,17 +10,50 @@ export default async function SelectLocationPaymentPage() {
     orderBy: { name: 'asc' },
     include: {
       _count: {
-        select: { students: true } // Menghitung jumlah siswa per lokasi
+        select: { students: true }
       }
     }
   });
-  
+
+  // Hitung total semua siswa untuk kartu "All Locations"
+  const totalAllStudents = locations.reduce((acc, loc) => acc + loc._count.students, 0);
 
   return (
-    <div className=" max-w-5xl mt-3mx-auto">
+    <div className="max-w-5xl mt-3 mx-auto">
       <DashboardHeader title="Payments" />
 
-      <div className="grid grid-cols-2  mt-2 gap-4 p-1">
+      <div className="grid grid-cols-2 mt-2 gap-4 p-1">
+        
+        {/* --- KARTU ALL LOCATIONS --- */}
+        <Link 
+          href={`/admin/payment/all`}
+          className="group relative bg-gradient-to-br from-fuchsia-800 to-fuchsia-900 p-2 rounded-3xl border border-slate-700 shadow-sm hover:shadow-xl transition-all active:scale-[0.98]"
+        >
+          <div className="flex flex-col h-full">
+            <div className="flex justify-between items-start mb-4">
+              <div className="bg-cyan-500 p-3 rounded-2xl group-hover:bg-white transition-colors">
+                <LayoutGrid className="w-4 h-4 text-white group-hover:text-cyan-600" />
+              </div>
+              <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-white group-hover:translate-x-1 transition-all" />
+            </div>
+
+            <div>
+              <h3 className="text-md font-bold text-white">
+                Semua Lokasi
+              </h3>
+              <p className="text-[10px] text-slate-400 font-medium">Rekapitulasi Seluruh Cabang</p>
+            </div>
+
+            <div className="mt-2 pt-2 border-t border-slate-700 flex items-center justify-between">
+              <span className="text-[8px] font-bold text-slate-400 uppercase">Total Siswa</span>
+              <span className="text-sm font-black text-white bg-slate-700 px-3 py-1 rounded-full group-hover:bg-cyan-600 transition-colors">
+                {totalAllStudents}
+              </span>
+            </div>
+          </div>
+        </Link>
+
+        {/* --- DAFTAR LOKASI SPESIFIK --- */}
         {locations.map((loc) => (
           <Link 
             key={loc.id} 
@@ -39,7 +72,6 @@ export default async function SelectLocationPaymentPage() {
                 <h3 className="text-md font-bold text-slate-800 group-hover:text-cyan-700 transition-colors">
                   {loc.name}
                 </h3>
-                
               </div>
 
               <div className="mt-2 pt-2 border-t border-slate-50 flex items-center justify-between">
