@@ -17,7 +17,7 @@ export default async function StudentPublicProfile({
         orderBy: { date: 'desc' },
         take: 5,
       },
-      payments: {
+      payment: {
         where: { status: "SUCCESS" },
         orderBy: { createdAt: 'desc' },
         take: 10,
