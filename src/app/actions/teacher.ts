@@ -122,11 +122,19 @@ export async function handleTeacherCheckIn(scannedQrId: string, userCoords: { la
     const currentMinute = now.getMinutes();
     let isLate = false;
 
-    if (user.role === "TEACHER") {
-      if (currentHour > 13 || (currentHour === 13 && currentMinute > 20)) isLate = true;
-    } else if (user.role === "ADMIN") {
-      if (currentHour >= 11) isLate = true;
-    }
+    if (user.isRemote) {
+        isLate = false; 
+      } else if (user.role === "TEACHER") {
+        // Aturan Guru: Batas 13:20
+        if (currentHour > 13 || (currentHour === 13 && currentMinute > 20)) {
+          isLate = true;
+        }
+      } else if (user.role === "ADMIN") {
+        // Aturan Admin Kantor: Batas 11:00
+        if (currentHour >= 11) {
+          isLate = true;
+        }
+      }
 
     // 5. SIMPAN KE TeacherAttendance
     await prisma.teacherAttendance.create({

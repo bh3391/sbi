@@ -16,6 +16,7 @@ model User {
   image          String?
   role           Role    @default(TEACHER)
   specialization String?
+  isRemote       Boolean @default(false)
 
   qrCodeId           String?             @unique @default(uuid())
   homebaseId         String?
@@ -56,21 +57,37 @@ model Student {
   nickname      String
   parentContact String?
   parentName    String? // Kolom Baru
+  address       String?
 
   imageProfile  String?
   status        StudentStatus   @default(NEWSTUDENT)
   qrCodeId      String          @unique @default(uuid())
   packageId     String? // Ubah dari packageType ke Relasi ID
   package       Package?        @relation(fields: [packageId], references: [id])
-  subjectId     String? // Ubah dari packageType ke Relasi ID
-  subject       Subject?        @relation(fields: [subjectId], references: [id])
+  subjects       Subject[]        
   remainingSesi Int             @default(0)
+  addOnSesi     Int             @default(0)
   locationId    String
   attendances   AttendanceLog[]
   location      Location        @relation(fields: [locationId], references: [id])
-  Payment[]     @relation("StudentPayments")
+  payment       Payment[]     @relation("StudentPayments")
   schedules     Schedule[]
+  addons         Addon[]         @relation("StudentAddons")
 }
+
+model Addon {
+  id          String   @id @default(cuid())
+  name        String   // Contoh: "Robotik", "Coding", "Sains"
+  description String?
+  isActive    Boolean  @default(true)
+  price       Float    @default(0)
+  sesiCredit  Int
+  
+  // Relasi ke log kehadiran untuk tracking
+  attendances AttendanceLog[]
+  students    Student[] @relation("StudentAddons")
+}
+
 model Schedule {
   id        String   @id @default(cuid())
   day       String   // Senin, Selasa, Rabu, dsb.
@@ -107,6 +124,7 @@ model Subject {
   students    Student[]
   attendances AttendanceLog[]
   schedules Schedule[]
+
 }
 
 // Tambahan Tabel StudentSession agar waktu sesi tidak manual ketik
@@ -144,6 +162,10 @@ model AttendanceLog {
   // Logika Reschedule
   isRescheduled  Boolean   @default(false)
   rescheduleDate DateTime? // Diisi jika status IZIN/SAKIT
+
+  isAddon     Boolean  @default(false)
+  addonId     String?  // Jika isAddon true, hubungkan ke ID Addon-nya
+  addon       Addon?   @relation(fields: [addonId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -190,8 +212,8 @@ model Payment {
   id String @id @default(cuid())
 
   // Relasi ke Siswa
-  studentId String
-  student   Student[] @relation("StudentPayments")
+  
+  students   Student[] @relation("StudentPayments")
 
   // Detail Pembayaran
   amount Float // Nilai tagihan
@@ -218,7 +240,7 @@ model Payment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([studentId])
+  
   @@index([status])
 }
 

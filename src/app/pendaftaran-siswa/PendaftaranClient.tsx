@@ -1,11 +1,11 @@
 "use client";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, Send, GraduationCap, Info, ShieldCheck,Sparkles } from "lucide-react";
-import { createStudent } from "@/app/actions/students";
+import { CheckCircle2, Send, GraduationCap, Info, ShieldCheck,Sparkles, ChevronDown, Check } from "lucide-react";
+import { registerStudentPublic } from "@/app/actions/students";
 import { toast } from "sonner";
 
-export default function PendaftaranClient({ locations, packages, subjects }: any) {
+export default function PendaftaranClient({ locations, packages, subjects, addOns }: any) {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   
@@ -13,36 +13,71 @@ export default function PendaftaranClient({ locations, packages, subjects }: any
   const [hasRead, setHasRead] = useState(false); // Untuk melacak apakah S&K sudah dibuka
   const [agreed, setAgreed] = useState(false);
 
+  const [isSubjectOpen, setIsSubjectOpen] = useState(false);
+
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+
+  const REG_FEE=150000
+
+  const toggleSubject = (id: string) => {
+  setSelectedSubjects(prev => 
+    prev.includes(id) 
+      ? prev.filter(item => item !== id) 
+      : [...prev, id]
+   );
+  };
+  const [selectedPackage, setSelectedPackage] = useState<any>(null);
+  const [selectedAddOn, setSelectedAddOn] = useState<any>(null);
+
+  // Fungsi untuk menghitung total
+  const totalBiaya = (selectedPackage?.price || 0) + (selectedAddOn?.price || 0) + REG_FEE;
+
+  const selectedNames = subjects
+    .filter((s: any) => selectedSubjects.includes(s.id))
+    .map((s: any) => s.name)
+    .join(", ");
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
   e.preventDefault();
 
-  // 1. Validasi Persetujuan S&K
   if (!agreed) {
     return toast.warning("Persetujuan Dibutuhkan", {
       description: "Silakan setujui syarat dan ketentuan untuk melanjutkan.",
     });
   }
 
+  if (!selectedPackage && !selectedAddOn) {
+    return toast.error("Pilihan Belum Lengkap", {
+      description: "Silakan pilih Paket Utama atau Program Add-on terlebih dahulu.",
+    });
+  }
+
+  // Validasi Mapel (Opsional: Jika wajib pilih minimal 1)
+  if (selectedSubjects.length === 0) {
+    return toast.error("Mata Pelajaran Belum Dipilih", {
+      description: "Silakan pilih minimal satu mata pelajaran.",
+    });
+  }
+
   setLoading(true);
   const formData = new FormData(e.currentTarget);
-  const data = Object.fromEntries(formData.entries());
-
-  // 2. Gunakan toast.promise untuk proses pendaftaran
-  toast.promise(createStudent(data), {
+  
+  // SINKRONISASI DATA: Pastikan subjectIds masuk ke FormData
+  // Karena input hidden sudah ada di bawah, kita tinggal kirim form-nya
+  
+  toast.promise(registerStudentPublic(formData), { // Langsung kirim formData agar lebih aman
     loading: 'Sedang mendaftarkan siswa...',
     success: (res: any) => {
       if (res.success) {
         setIsSubmitted(true);
-        return `Pendaftaran ${data.fullName} berhasil!`;
+        return `Pendaftaran berhasil!`;
       } else {
         throw new Error(res.message || "Gagal mendaftarkan siswa");
       }
     },
     error: (err) => {
-      return err.message || "Terjadi kesalahan sistem";
-    },
-    finally: () => {
       setLoading(false);
+      return err.message || "Terjadi kesalahan sistem";
     },
   });
 };
@@ -113,46 +148,6 @@ export default function PendaftaranClient({ locations, packages, subjects }: any
             </div>
           </div>
         </div>
-
-        {/* Section: Paket Belajar */}
-        <div className="group rounded-[28px] bg-slate-50/50 p-1 transition-all">
-        <div className="bg-white rounded-[24px] p-6 shadow-sm border border-slate-100 space-y-5">
-            <div className="flex items-center gap-3 mb-2">
-            <div className="h-2 w-2 rounded-full bg-cyan-500 animate-pulse" />
-            <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-500">Paket Belajar</h2>
-            </div>
-
-            <div className="space-y-4">
-            <div className="space-y-1">
-                <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Pilih Paket</label>
-                <div className="grid grid-cols-1 gap-3">
-                {packages.map((pkg: any) => (
-                    <label 
-                    key={pkg.id} 
-                    className="relative flex items-center justify-between p-4 rounded-2xl border-2 border-slate-50 cursor-pointer hover:border-cyan-100 transition-all has-[:checked]:border-cyan-500 has-[:checked]:bg-cyan-50/30 group/pkg"
-                    >
-                    <input 
-                        type="radio" 
-                        name="packageId" 
-                        value={pkg.id} 
-                        required 
-                        className="peer sr-only" 
-                    />
-                    <div className="flex flex-col">
-                        <span className="text-xs font-black text-slate-700 uppercase tracking-tight">{pkg.name}</span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">{pkg.sesiCredit} Sesi Pertemuan</span>
-                    </div>
-                    <div className="h-5 w-5 rounded-full border-2 border-slate-200 peer-checked:border-cyan-500 peer-checked:bg-cyan-500 flex items-center justify-center transition-all">
-                        <div className="h-2 w-2 rounded-full bg-white scale-0 peer-checked:scale-100 transition-transform" />
-                    </div>
-                    </label>
-                ))}
-                </div>
-            </div>
-            </div>
-        </div>
-        </div>
-
         {/* Section 2: Akademik */}
         <div className="group rounded-[28px] bg-slate-50/50 p-1 transition-all">
           <div className="bg-white rounded-[24px] p-6 shadow-sm border border-slate-100 space-y-5">
@@ -164,23 +159,212 @@ export default function PendaftaranClient({ locations, packages, subjects }: any
             <div className="grid grid-cols-1 gap-4">
               <div className="space-y-1">
                 <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Lokasi Cabang</label>
-                <select name="locationId" required className="w-full rounded-xl bg-slate-50 p-3.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-fuchsia-500/20 appearance-none border border-transparent focus:border-fuchsia-100">
+                <select name="locationId"  className="w-full rounded-xl bg-slate-50 p-3.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-fuchsia-500/20 appearance-none border border-transparent focus:border-fuchsia-100">
                   <option value="">Pilih Cabang</option>
                   {locations.map((loc: any) => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
                 </select>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Mata Pelajaran</label>
-                <select name="subjectId" required className="w-full rounded-xl bg-slate-50 p-3.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-fuchsia-500/20 appearance-none border border-transparent focus:border-fuchsia-100">
-                  <option value="">Pilih Mapel</option>
-                  {subjects.map((sub: any) => <option key={sub.id} value={sub.id}>{sub.name}</option>)}
-                </select>
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-slate-400 uppercase ml-1">
+                  Mata Pelajaran
+                </label>
+                
+                <div className="space-y-1">
+  
+  
+                <div className="relative">
+                  {/* Trigger Button */}
+                  <button
+                    type="button"
+                    onClick={() => setIsSubjectOpen(!isSubjectOpen)}
+                    className="w-full flex items-center justify-between rounded-xl bg-slate-50 p-3.5 text-xs font-bold text-slate-700 border border-transparent focus:border-fuchsia-100 focus:ring-2 focus:ring-fuchsia-500/20 transition-all"
+                  >
+                    <span className="truncate">
+                      {selectedSubjects.length > 0 ? selectedNames : "Pilih Mapel"}
+                    </span>
+                    <ChevronDown size={14} className={`transition-transform ${isSubjectOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {isSubjectOpen && (
+                    <>
+                      {/* Backdrop untuk menutup menu saat klik di luar */}
+                      <div className="fixed inset-0 z-[100]" onClick={() => setIsSubjectOpen(false)} />
+                      
+                      <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl z-[110] p-2 max-h-60 overflow-y-auto no-scrollbar animate-in fade-in zoom-in duration-150">
+                        <div className="grid grid-cols-1 gap-1">
+                          {subjects.map((sub: any) => {
+                            const isSelected = selectedSubjects.includes(sub.id);
+                            return (
+                              <button
+                                key={sub.id}
+                                type="button"
+                                onClick={() => toggleSubject(sub.id)}
+                                className={`flex items-center justify-between px-4 py-3 rounded-xl transition-all ${
+                                  isSelected 
+                                    ? "bg-fuchsia-50 text-fuchsia-600" 
+                                    : "hover:bg-slate-50 text-slate-500"
+                                }`}
+                              >
+                                <span className="text-[10px] font-black uppercase tracking-wider">{sub.name}</span>
+                                <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all ${
+                                  isSelected ? "bg-fuchsia-500 border-fuchsia-500" : "border-slate-200"
+                                }`}>
+                                  {isSelected && <Check size={12} className="text-white" strokeWidth={4} />}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Hidden Input untuk Server Action */}
+                <input type="hidden" name="subjectIds" value={JSON.stringify(selectedSubjects)} />
+              </div>
               </div>
             </div>
           </div>
         </div>
 
+
+        {/* Section: Paket Belajar */}
+        <div className="group rounded-[28px] bg-slate-50/50 p-1 transition-all">
+          <div className="bg-white rounded-[24px] p-5 shadow-sm border border-slate-100 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="h-2 w-2 rounded-full bg-cyan-500 animate-pulse" />
+              <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-500">Konfigurasi Paket</h2>
+            </div>
+
+            <div className="grid grid-cols-1  gap-4">
+              {/* PAKET UTAMA - Dibuat lebih kecil */}
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Paket Utama</label>
+                <div className="grid grid-cols-2 gap-2 max-h-[180px] overflow-y-auto pr-1 no-scrollbar">
+                  {packages.map((pkg: any) => (
+                    <label 
+                      key={pkg.id} 
+                      onClick={() => setSelectedPackage(pkg)}
+                      className="relative flex items-center justify-between p-3 rounded-xl border border-slate-100 cursor-pointer hover:border-cyan-200 transition-all has-[:checked]:border-cyan-500 has-[:checked]:bg-cyan-50/30 group/pkg"
+                    >
+                      <input type="radio" onChange={() => setSelectedPackage(pkg)} name="packageId" value={pkg.id}  className="peer sr-only" />
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-black text-slate-700 uppercase">{pkg.name}</span>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase">
+                          {pkg.sesiCredit} Sesi • {new Intl.NumberFormat('id-ID', {
+                            style: 'currency',
+                            currency: 'IDR',
+                            minimumFractionDigits: 0
+                          }).format(pkg.price)}
+                        </span>
+                      </div>
+                      <div className="h-4 w-4 rounded-full border-2 border-slate-200 peer-checked:border-cyan-500 peer-checked:bg-cyan-500 flex items-center justify-center transition-all">
+                        <div className="h-1.5 w-1.5 rounded-full bg-white scale-0 peer-checked:scale-100 transition-transform" />
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* PAKET ADD-ON - Menggunakan Dropdown & Nullable */}
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Paket Tambahan (Opsional)</label>
+                <div className="relative group/select">
+                  <select 
+                    name="addOnId" 
+                    onChange={(e) => {
+                      const addon = addOns.find((a: any) => a.id === e.target.value);
+                      setSelectedAddOn(addon || null);
+                    }}
+ 
+                    className="w-full rounded-xl bg-slate-50 p-3 text-[11px] font-bold text-slate-700 outline-none border border-transparent focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/5 appearance-none transition-all cursor-pointer"
+                  >
+                    <option value="">— Tanpa Add-On —</option>
+                    {addOns?.map((addon: any) => (
+                      <option key={addon.id} value={addon.id}>
+                        {`${addon.name} (${addon.sesiCredit ?? 0} Sesi) | Rp ${(addon.price || 0).toLocaleString('id-ID')}`}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-focus-within/select:text-cyan-500 transition-colors">
+                    <ChevronDown size={14} />
+                  </div>
+                </div>
+                
+                <p className="text-[8px] text-slate-400 italic px-1">
+                  *Pilih add-on jika siswa mengambil sesi tambahan di luar paket utama.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ESTIMASI TOTAL BIAYA */}
+        <AnimatePresence>
+          {(selectedPackage || selectedAddOn) && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="mx-2 p-4 rounded-2xl bg-fuchsia-900 text-white shadow-xl overflow-hidden relative"
+            >
+              <div className="absolute top-0 right-0 p-4 opacity-10">
+                <Sparkles size={40} />
+              </div>
+              <div className="space-y-1.5 mb-3 border-b border-slate-800 pb-3">
+  {/* Biaya Registrasi */}
+  <div className="flex justify-between items-center opacity-80">
+    <p className="text-[10px] text-slate-300 font-medium">Biaya Registrasi</p>
+    <p className="text-[10px] text-slate-300 font-bold">
+      Rp {REG_FEE.toLocaleString('id-ID')}
+    </p>
+  </div>
+
+  {/* Paket Utama */}
+  {selectedPackage && (
+    <div className="flex justify-between items-center">
+      <p className="text-[10px] text-slate-300 font-medium">
+        Paket: <span className="text-cyan-400">{selectedPackage.name}</span>
+      </p>
+      <p className="text-[10px] text-slate-300 font-bold">
+        Rp {selectedPackage.price.toLocaleString('id-ID')}
+      </p>
+    </div>
+  )}
+
+  {/* Add-On */}
+  {selectedAddOn && (
+    <div className="flex justify-between items-center">
+      <p className="text-[10px] text-slate-300 font-medium">
+        Add-On: <span className="text-fuchsia-400">{selectedAddOn.name}</span>
+      </p>
+      <p className="text-[10px] text-slate-300 font-bold">
+        Rp {selectedAddOn.price.toLocaleString('id-ID')}
+      </p>
+    </div>
+  )}
+</div>
+
+{/* Total Akhir */}
+<div className="flex justify-between items-end relative z-10">
+  <div>
+    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">Total Investasi Belajar</p>
+    <p className="text-[8px] text-slate-400 italic">Terhitung per 1 periode</p>
+  </div>
+  <div className="text-right">
+    <h3 className="text-xl font-black text-cyan-400 tracking-tight">
+      Rp {(REG_FEE + (selectedPackage?.price || 0) + (selectedAddOn?.price || 0)).toLocaleString('id-ID')}
+    </h3>
+  </div>
+</div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        
         {/* TOS Section */}
         <div className="px-2 py-4">
           <label className={`flex items-start gap-3 cursor-pointer group ${!hasRead ? 'opacity-50 cursor-not-allowed' : ''}`}>
@@ -285,6 +469,8 @@ export default function PendaftaranClient({ locations, packages, subjects }: any
           onClick={() => {
             setShowModal(false);
             setHasRead(true);
+            setAgreed(true); // <-- Otomatis centang checkbox
+            toast.success("Syarat & Ketentuan disetujui");
           }}
           className="bg-cyan-600 text-white px-8 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-cyan-700 transition-all shadow-lg shadow-cyan-200"
         >

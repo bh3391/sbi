@@ -10,7 +10,8 @@ export default async function PendaftaranPublicPage() {
       <PendaftaranClient 
         locations={refs.locations} 
         packages={refs.packages} 
-        subjects={refs.subjects} 
+        subjects={refs.subjects}
+        addOns={refs.addOns} 
       />
     </main>
   );

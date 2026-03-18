@@ -136,6 +136,7 @@ export default function GeneratorQR({ user }: Props) {
             userId={user.id} 
             userName={user.name} 
             onClose={() => setShowResetModal(false)}
+            onSuccess={()=>setShowResetModal(false)}
           />
         )}
       </AnimatePresence>

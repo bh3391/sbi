@@ -9,7 +9,7 @@ export default function DashboardHeader({ title }: { title: string }) {
   
 
   return (
-    <div className="flex items-center justify-between  bg-cyan-50 border-b border-cyan-100 p-2">
+    <div className="flex items-center justify-between  bg-cyan-50 border-b border-cyan-300 p-2">
       <div className="flex items-center gap-1 max-w-md">
         {/* Tombol Back: Mengikuti style tombol close (X) di drawer */}
         <button
@@ -20,7 +20,7 @@ export default function DashboardHeader({ title }: { title: string }) {
         </button>
         
         <div>
-          <h1 className="text-sm font-black text-cyan-600 uppercase tracking-tighter leading-none">
+          <h1 className="text-sm font-bold text-slate-800 uppercase tracking-tighter leading-none">
             {title}
           </h1>
           {/* Subtitle opsional agar senada dengan drawer */}

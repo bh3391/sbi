@@ -47,6 +47,17 @@ export default async function TeacherAgendaPage() {
     orderBy: { session: { startTime: 'asc' } }
   });
 
+  const addons = await prisma.addon.findMany({
+  where: {
+    isActive: true // Hanya ambil program yang aktif
+  },
+  select: {
+    id: true,
+    name: true,
+  }
+  });
+  
+
   // Tambahkan pengecekan sederhana untuk menghindari error jika user tidak ditemukan
   if (!currentUser) {
     return <div className="p-10 text-center">Silahkan login kembali.</div>;
@@ -58,6 +69,7 @@ export default async function TeacherAgendaPage() {
         initialSchedules={initialSchedules}
         allTeachers={allTeachers}
         currentUser={currentUser}
+        dataAddons={addons}
         today={today}
       />
     </div>

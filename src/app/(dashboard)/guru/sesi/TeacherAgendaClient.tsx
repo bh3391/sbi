@@ -13,7 +13,6 @@ interface TeacherAgendaProps {
   allTeachers: any[];
   currentUser: any;
   today: string;
-  dataAddons: any[];
 }
 interface ScheduleData {
   id: string;
@@ -27,12 +26,10 @@ export default function TeacherAgendaClient({
   initialSchedules, 
   allTeachers, 
   currentUser,
-  today,
-  dataAddons,
+  today
 }: TeacherAgendaProps) {
 
   
-
   const [selectedTeacherId, setSelectedTeacherId] = useState(currentUser.id);
   // Simpan initialSchedules ke state agar bisa diupdate jika admin memilih guru lain
   const [schedules, setSchedules] = useState(initialSchedules);
@@ -169,8 +166,6 @@ export default function TeacherAgendaClient({
             schedule={selectedSchedule} 
             teacherId={selectedTeacherId} 
             onClose={() => setSelectedSchedule(null)} 
-            dataAddon={dataAddons}
-            
           />
         )}
       </AnimatePresence>

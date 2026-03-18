@@ -10,6 +10,7 @@ interface AttendanceItem {
   studentId: string;
   nickname: string;
   remainingSesi: number;
+  remainingAddOnSesi: number;
   subjectId: string;
   sessionId: string;
   status: string;
@@ -17,9 +18,15 @@ interface AttendanceItem {
   score: string;
   materi: string;
   rescheduleDate: string;
+  remainingAddonSesi: number;
+  evaluation: string;
+  addOn: string;
+  isAddon: boolean
 }
 
-export default function AttendanceSheet({ schedule, teacherId, onClose }: any) {
+export default function AttendanceSheet({ schedule, teacherId, onClose,dataAddon }: any) {
+  
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const scoreOptions = ["A", "A-", "B+", "B", "B-", "C"];
@@ -32,6 +39,10 @@ export default function AttendanceSheet({ schedule, teacherId, onClose }: any) {
     studentId: s.id,
     nickname: s.nickname,
     remainingSesi: s.remainingSesi,
+    remainingAddOnSesi:s.addonSesi,
+    isAddon: false,
+    addOn:"",
+    evaluation:"",
     subjectId: schedule.subjectId,
     sessionId: schedule.sessionId,
     status: "HADIR",
@@ -51,29 +62,42 @@ export default function AttendanceSheet({ schedule, teacherId, onClose }: any) {
 };
 
   const handleSave = async () => {
-    // Validasi: Materi wajib jika HADIR
-    const incomplete = attendanceList.find(item => item.status === "HADIR" && !item.materi);
-    if (incomplete) {
-      toast.error(`Materi untuk ${incomplete.nickname} belum diisi!`);
-      return;
-    }
+  // 1. Validasi: Materi wajib jika HADIR
+  const incompleteMateri = attendanceList.find(
+    (item) => item.status === "HADIR" && !item.materi
+  );
+  if (incompleteMateri) {
+    toast.error(`Materi untuk ${incompleteMateri.nickname} belum diisi!`);
+    return;
+  }
 
-    setIsSubmitting(true);
-    try {
-      // Kirim data ke server action Anda
-      const res = await saveAttendanceAction(attendanceList, teacherId);
-      if (res.success) {
-        toast.success(res.message);
-        onClose();
-      } else {
-        toast.error(res.message);
-      }
-    } catch (err) {
-      toast.error("Terjadi kesalahan sistem.");
-    } finally {
-      setIsSubmitting(false);
+  // 2. Validasi: Program Add-On WAJIB dipilih jika isAddon = true
+  const incompleteAddon = attendanceList.find(
+    (item) => item.status === "HADIR" && item.isAddon && !item.addOn
+  );
+  if (incompleteAddon) {
+    toast.error(`Pilih program Add-On untuk ${incompleteAddon.nickname}!`);
+    return;
+  }
+
+  setIsSubmitting(true);
+  try {
+    // Pastikan data yang dikirim sudah bersih
+    const res = await saveAttendanceAction(attendanceList, teacherId);
+    
+    if (res.success) {
+      toast.success(res.message);
+      onClose();
+    } else {
+      toast.error(res.message);
     }
-  };
+  } catch (err) {
+    console.error(err);
+    toast.error("Terjadi kesalahan sistem saat menyimpan.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   return (
     <motion.div 
@@ -192,25 +216,88 @@ export default function AttendanceSheet({ schedule, teacherId, onClose }: any) {
                         </select>
                       </div>
                     </div>
+                    {/* --- BAGIAN BARU: TOGGLE TIPE PERTEMUAN --- */}
+                      <div className="space-y-2">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Tipe Pertemuan</label>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => updateStudentData(item.studentId, "isAddon", false)}
+                            className={`flex-1 py-2 rounded-xl text-[9px] font-bold border transition-all ${
+                              !item.isAddon ? "bg-cyan-500 text-white border-cyan-500 shadow-md" : "bg-slate-50 text-slate-400 border-slate-100"
+                            }`}
+                          >
+                            REGULER
+                          </button>
+                          <button
+                            onClick={() => updateStudentData(item.studentId, "isAddon", true)}
+                            className={`flex-1 py-2 rounded-xl text-[9px] font-bold border transition-all ${
+                              item.isAddon ? "bg-fuchsia-500 text-white border-fuchsia-500 shadow-md" : "bg-slate-50 text-slate-400 border-slate-100"
+                            }`}
+                          >
+                            ADD-ON
+                          </button>
+                        </div>
 
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Materi & Evaluasi</label>
-                      <div className="relative">
-                        <BookOpen size={14} className="absolute left-3 top-3 text-slate-300" />
-                        <textarea 
-                          placeholder="Materi yang dipelajari hari ini..."
-                          value={item.materi}
-                          onChange={(e) => updateStudentData(item.studentId, "materi", e.target.value)}
-                          className="w-full bg-slate-50 border-none rounded-2xl p-3 pl-10 text-[11px] font-medium outline-none focus:ring-2 focus:ring-cyan-100 min-h-[90px] shadow-inner"
-                        />
+                        {/* Jika Add-on aktif, pilih Subject Khusus */}
+                        {item.isAddon && (
+                              <motion.div 
+                                initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+                                className="mt-2 p-3 bg-fuchsia-50 rounded-2xl border border-fuchsia-100 overflow-hidden"
+                              >
+                                <p className="text-[8px] font-black text-fuchsia-600 uppercase mb-2 ml-1">Pilih Program Add-On:</p>
+
+                                <select 
+                                  value={item.addOn} // Gunakan field 'addOn'
+                                  onChange={(e) => updateStudentData(item.studentId, "addOn", e.target.value)} // Update field 'addOn'
+                                  className="w-full bg-white border-none rounded-xl py-2.5 px-3 text-[10px] font-black text-fuchsia-700 outline-none shadow-sm"
+                                >
+                                  <option value="">-- Pilih Program --</option>
+                                  {(dataAddon || []).map((addon: any) => (
+                                    <option key={addon.id} value={addon.id}>
+                                      {addon.name.toUpperCase()}
+                                    </option>
+                                  ))}
+                                </select>
+
+                                <div className="mt-2 flex items-center gap-1.5 ml-1">
+                                  <div className="w-1 h-1 bg-fuchsia-400 rounded-full" />
+                                  <p className="text-[8px] font-bold text-fuchsia-400 uppercase italic">
+                                    Sisa Kuota Add-On: {item.remainingAddonSesi} Sesi
+                                  </p>
+                                </div>
+                              </motion.div>
+                            )}
                       </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          );
-        })}
+
+                                <div className="space-y-1.5">
+                                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Materi & Evaluasi</label>
+                                  <div className="relative">
+                                    <BookOpen size={14} className="absolute left-3 top-3 text-slate-300" />
+                                    <textarea 
+                                      placeholder="Materi yang dipelajari hari ini..."
+                                      value={item.materi}
+                                      onChange={(e) => updateStudentData(item.studentId, "materi", e.target.value)}
+                                      className="w-full bg-slate-50 border-none rounded-2xl p-3 pl-10 text-[11px] font-medium outline-none focus:ring-2 focus:ring-cyan-100 min-h-[90px] shadow-inner"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Evaluasi & Saran</label>
+                                <div className="relative">
+                                  <textarea 
+                                    placeholder="Evaluasi perkembangan siswa atau saran untuk orang tua..."
+                                    value={item.evaluasi}
+                                    onChange={(e) => updateStudentData(item.studentId, "evaluation", e.target.value)}
+                                    className="w-full bg-slate-50 border-none rounded-2xl p-3 text-[11px] font-medium outline-none focus:ring-2 focus:ring-fuchsia-100 min-h-[70px] shadow-inner"
+                                  />
+                                </div>
+                              </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      );
+                    })}
 
         <div className="p-5 bg-amber-50 rounded-[2.5rem] border border-amber-100 flex gap-4">
           <AlertCircle size={20} className="text-amber-500 shrink-0" />

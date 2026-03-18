@@ -1,29 +1,65 @@
-exports// app/guru/profile/page.tsx
-import prisma  from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-import GeneratorQR from "@/components/dashboard/GeneratorQr";
-import Header from "@/components/dashboard/header";
+import { auth } from "@/lib/auth"; // Sesuaikan dengan library auth Anda
+import prisma from "@/lib/prisma";
+import TeacherAgendaClient from "./TeacherAgendaClient";
+import { getCurrentDayName } from "@/app/actions/schedule";
 
-export default async function ProfilePage() {
+export default async function TeacherAgendaPage() {
   const session = await auth();
-  const user = await prisma.user.findUnique({
-    where: { id: session?.user?.id },
-    select: { name: true, qrCodeId: true, email: true, id: true }
+  const userId = session?.user?.id;
+
+  // 1. Ambil data guru yang sedang login
+  const currentUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, role: true, nickname: true }
   });
 
-  if (!user || !user.qrCodeId) return <div>Data tidak tersedia</div>;
+  // 2. Ambil semua daftar guru (untuk dropdown Admin)
+  const allTeachers = await prisma.user.findMany({
+    where: { role: "TEACHER" },
+    select: { id: true, nickname: true, name: true },
+    orderBy: { nickname: 'asc' }
+  });
+
+  const today = await getCurrentDayName();
+  // 3. Ambil jadwal hari ini (Indonesian Day)
+  // const today = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(new Date());
+
+  const initialSchedules = await prisma.schedule.findMany({
+    where: {
+      // Gunakan ID pertama jika admin belum memilih guru
+      teacherId: currentUser?.role === "TEACHER" ? currentUser.id : allTeachers[0]?.id,
+      day: today,
+    },
+    include: {
+      session: true,
+      subject: true,
+      room: true,
+      // Jika relasi direct (Many-to-Many Implicit)
+      students: {
+        select: {
+          id: true,
+          nickname: true,
+          fullName: true,
+          imageProfile: true,
+        }
+      },
+    },
+    orderBy: { session: { startTime: 'asc' } }
+  });
+
+  // Tambahkan pengecekan sederhana untuk menghindari error jika user tidak ditemukan
+  if (!currentUser) {
+    return <div className="p-10 text-center">Silahkan login kembali.</div>;
+  }
 
   return (
-    <section className="bg-cyan-50 min-h-screen">
-        <Header title="QR Kode" />
-    <div className="p-1 items-center  justify-center max-w-md mx-auto">
-      <GeneratorQR user={{
-    name: user.name ?? "Tanpa Nama", 
-    qrCodeId: user.qrCodeId ?? "" ,
-    email: user.email ?? "",
-    id: user.id ?? ""
-  }} />
+    <div className="min-h-screen bg-cyan-50 pb-20">
+      <TeacherAgendaClient 
+        initialSchedules={initialSchedules}
+        allTeachers={allTeachers}
+        currentUser={currentUser}
+        today={today}
+      />
     </div>
-    </section>
   );
 }

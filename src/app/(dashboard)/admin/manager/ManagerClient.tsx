@@ -9,24 +9,36 @@ import {
 import { createRoom, createLocation, createStudentSession, createSubject, deleteLocation, deleteStudentSession,deleteSubject, deleteRoom } from "@/app/actions/manager";
 import DashboardHeader from "@/components/dashboard/header";
 import { createPackage, deletePackage, updatePackage } from "@/app/actions/package";
+import { createAddon, deleteAddon, updateAddon } from "@/app/actions/addon";
 
-export default function ManagerClient({ initialLocations, initialSessions, initialSubjects, initialPackages }: any) {
+export default function ManagerClient({ initialLocations, initialSessions, initialSubjects, initialPackages, initialAddons }: any) {
   const [activeTab, setActiveTab] = useState("lokasi");
   const [isPending, setIsPending] = useState(false);
+
+  const [editingPackage, setEditingPackage] = useState<any>(null);
+  const [editingAddon, setEditingAddon] = useState<any>(null);
   
   // Modal States
-  const [modal, setModal] = useState<{ type: string | null }>({ type: null });
-  const [editingPackage, setEditingPackage] = useState<any>(null);
-  const openEditModal = (pkg: any) => {
-  setEditingPackage(pkg);
-  setModal({ type: 'edit-package' });
-  };
-  const closeModal = () => {
-  setModal({ type: null });
-  setEditingPackage(null); // Reset data edit
-  setIsPending(false);
+  const [modal, setModal] = useState<{ 
+  type: string | null; 
+  data?: any 
+  }>({ type: null });
+  
+  
+  
+  
+  const openEditAddonModal = (addon: any) => {
+  setModal({ type: 'addon-edit', data: addon });
 };
 
+const openEditModal = (pkg: any) => {
+  setModal({ type: 'edit-package', data: pkg });
+};
+
+const closeModal = () => {
+  setModal({ type: null, data: null }); // Bersihkan data saat tutup
+  setIsPending(false);
+};
   
   const [expandedLocation, setExpandedLocation] = useState<string | null>(null);
 
@@ -60,7 +72,7 @@ export default function ManagerClient({ initialLocations, initialSessions, initi
       <div className=" p-2 border-b border-slate-100 shadow-sm sticky top-0 z-30">
         <DashboardHeader title="Manajemen Master"  />
         <div className="flex gap-2 mt-2 p-1 bg-slate-50 rounded-2xl">
-          {['lokasi', 'sesi', 'mapel', 'package'].map((tab) => (
+          {['lokasi', 'sesi', 'mapel', 'package','add-on'].map((tab) => (
             <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${activeTab === tab ? "bg-cyan-500 text-white shadow-sm" : "text-slate-400"}`}>{tab}</button>
           ))}
         </div>
@@ -174,76 +186,147 @@ export default function ManagerClient({ initialLocations, initialSessions, initi
             </motion.div>
           )}
           {activeTab === "package" && (
-  <motion.div 
-    key="package" 
-    initial={{ opacity: 0, y: 10 }} 
-    animate={{ opacity: 1, y: 0 }} 
-    className="space-y-3"
-  >
-    {/* Tombol Tambah Paket */}
-    <button 
-      onClick={() => setModal({ type: 'package' })} 
-      className="w-full bg-fuchsia-600 text-white py-4 rounded-3xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-fuchsia-100 active:scale-95 transition-transform"
-    >
-      <Plus size={16} /> Buat Paket Baru
-    </button>
-
-    {/* List Paket */}
-    <div className="space-y-2">
-      {initialPackages.map((pkg: any) => (
-        <div 
-          key={pkg.id} 
-          className="bg-white p-3 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm hover:border-cyan-200 transition-colors group"
-        >
-          {/* Area Klik untuk Edit */}
-          <div 
-            className="flex items-center gap-4 flex-1 cursor-pointer" 
-            onClick={() => openEditModal(pkg)}
-          >
-            <div className="h-10 w-10 bg-fuchsia-50 text-fuchsia-500 rounded-xl flex items-center justify-center group-hover:bg-cyan-50 group-hover:text-cyan-500 transition-colors">
-              <Clock size={20} />
-            </div>
-            <div>
-              <h3 className="text-sm font-black text-slate-800 uppercase leading-none">
-                {pkg.name}
-              </h3>
-              <p className="text-[10px] font-bold text-slate-400 mt-1.5 flex items-center gap-2">
-                <span className="text-cyan-600">Rp {pkg.price?.toLocaleString('id-ID')}</span>
-                <span className="text-slate-300">•</span>
-                <span>{pkg.sesiCredit} Sesi</span>
-              </p>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-1">
-            <button 
-              onClick={() => openEditModal(pkg)} 
-              className="p-2 text-slate-300 hover:text-cyan-500 hover:bg-cyan-50 rounded-lg transition-all"
-              title="Edit Paket"
+            <motion.div 
+              key="package" 
+              initial={{ opacity: 0, y: 10 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              className="space-y-3"
             >
-              <Plus size={18} className="rotate-45" /> 
-            </button>
-            <button 
-              onClick={() => handleDelete(pkg.id, pkg.name, deletePackage)} 
-              className="p-2 text-slate-200 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
-              title="Hapus Paket"
-            >
-              <Trash2 size={18}/>
-            </button>
-          </div>
-        </div>
-      ))}
+              {/* Tombol Tambah Paket */}
+              <button 
+                onClick={() => setModal({ type: 'package' })} 
+                className="w-full bg-fuchsia-600 text-white py-4 rounded-3xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-fuchsia-100 active:scale-95 transition-transform"
+              >
+                <Plus size={16} /> Buat Paket Baru
+              </button>
 
-      {/* Empty State */}
-      {initialPackages.length === 0 && (
-        <div className="text-center py-10 border-2 border-dashed border-slate-200 rounded-[2.5rem]">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Belum ada paket tersedia</p>
-        </div>
-      )}
-    </div>
-  </motion.div>
-)}
+              {/* List Paket */}
+              <div className="space-y-2">
+                {initialPackages.map((pkg: any) => (
+                  <div 
+                    key={pkg.id} 
+                    className="bg-white p-3 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm hover:border-cyan-200 transition-colors group"
+                  >
+                    {/* Area Klik untuk Edit */}
+                    <div 
+                      className="flex items-center gap-4 flex-1 cursor-pointer" 
+                      onClick={() => openEditModal(pkg)}
+                    >
+                      <div className="h-10 w-10 bg-fuchsia-50 text-fuchsia-500 rounded-xl flex items-center justify-center group-hover:bg-cyan-50 group-hover:text-cyan-500 transition-colors">
+                        <Clock size={20} />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-slate-800 uppercase leading-none">
+                          {pkg.name}
+                        </h3>
+                        <p className="text-[10px] font-bold text-slate-400 mt-1.5 flex items-center gap-2">
+                          <span className="text-cyan-600">Rp {pkg.price?.toLocaleString('id-ID')}</span>
+                          <span className="text-slate-300">•</span>
+                          <span>{pkg.sesiCredit} Sesi</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-1">
+                      <button 
+                        onClick={() => openEditModal(pkg)} 
+                        className="p-2 text-slate-300 hover:text-cyan-500 hover:bg-cyan-50 rounded-lg transition-all"
+                        title="Edit Paket"
+                      >
+                        <Plus size={18} className="rotate-45" /> 
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(pkg.id, pkg.name, deletePackage)} 
+                        className="p-2 text-slate-200 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
+                        title="Hapus Paket"
+                      >
+                        <Trash2 size={18}/>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Empty State */}
+                {initialPackages.length === 0 && (
+                  <div className="text-center py-10 border-2 border-dashed border-slate-200 rounded-[2.5rem]">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Belum ada paket tersedia</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+          {activeTab === "add-on" && (
+            <motion.div 
+              key="add-on" 
+              initial={{ opacity: 0, y: 10 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              className="space-y-3"
+            >
+              {/* Tombol Tambah Add-on */}
+              <button 
+                onClick={() => setModal({ type: 'addon' })} 
+                className="w-full bg-cyan-600 text-white py-4 rounded-3xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-cyan-100 active:scale-95 transition-transform"
+              >
+                <Plus size={16} /> Buat Add-on Baru
+              </button>
+
+              {/* List Add-on */}
+              <div className="space-y-2">
+                {initialAddons.map((addon: any) => (
+                  <div 
+                    key={addon.id} 
+                    className="bg-white p-3 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm hover:border-fuchsia-200 transition-colors group"
+                  >
+                    {/* Area Klik untuk Edit */}
+                    <div 
+                      className="flex items-center gap-4 flex-1 cursor-pointer" 
+                      onClick={() => openEditAddonModal(addon)}
+                    >
+                      <div className="h-10 w-10 bg-cyan-50 text-cyan-600 rounded-xl flex items-center justify-center group-hover:bg-fuchsia-50 group-hover:text-fuchsia-600 transition-colors">
+                        <Plus size={20} className="scale-110" /> 
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-slate-800 uppercase leading-none">
+                          {addon.name}
+                        </h3>
+                        <p className="text-[10px] font-bold text-slate-400 mt-1.5 flex items-center gap-2">
+                          <span className="text-fuchsia-600">Rp {addon.price?.toLocaleString('id-ID')}</span>
+                          <span className="text-slate-300">•</span>
+                          <span className="px-2 py-0.5 bg-slate-100 rounded text-[8px] uppercase">Add-on Sesi</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-1">
+                      <button 
+                        onClick={() => openEditAddonModal(addon)} 
+                        className="p-2 text-slate-300 hover:text-fuchsia-500 hover:bg-fuchsia-50 rounded-lg transition-all"
+                        title="Edit Add-on"
+                      >
+                        <Plus size={18} className="rotate-45" /> 
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(addon.id, addon.name, deleteAddon)} 
+                        className="p-2 text-slate-200 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
+                        title="Hapus Add-on"
+                      >
+                        <Trash2 size={18}/>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Empty State */}
+                {initialAddons.length === 0 && (
+                  <div className="text-center py-10 border-2 border-dashed border-slate-200 rounded-[2.5rem]">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Belum ada add-on tersedia</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
 
           {/* TAB MAPEL */}
           {activeTab === "mapel" && (
@@ -311,6 +394,143 @@ export default function ManagerClient({ initialLocations, initialSessions, initi
                   <button disabled={isPending} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-[10px] uppercase italic tracking-widest">Simpan Mapel</button>
                 </form>
               )}
+              {modal.type === 'addon' && (
+                  <form onSubmit={(e) => handleAction(e, createAddon)} className="space-y-3">
+                    {/* Judul dengan skema warna Cyan */}
+                    <h2 className="text-xl font-black text-cyan-600 uppercase italic mb-4">Buat Add-on Baru</h2>
+                    
+                    {/* Nama Add-on */}
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Nama Add-on</label>
+                      <input 
+                        name="name" 
+                        placeholder="Contoh: Robotik, Coding, atau Alat Peraga" 
+                        className="w-full bg-slate-50 border border-slate-100 px-5 py-3.5 rounded-2xl text-xs font-bold focus:border-cyan-500 outline-none transition-all" 
+                        required 
+                      />
+                    </div>
+
+                    {/* Harga Add-on */}
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Harga Tambahan (IDR)</label>
+                      <div className="relative">
+                        <span className="absolute left-5 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">Rp</span>
+                        <input 
+                          name="price" 
+                          type="number" 
+                          placeholder="50000" 
+                          className="w-full bg-slate-50 border border-slate-100 pl-11 pr-5 py-3.5 rounded-2xl text-xs font-bold focus:border-cyan-500 outline-none transition-all" 
+                          required 
+                        />
+                      </div>
+                    </div>
+
+                    {/* Keterangan */}
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Deskripsi Layanan</label>
+                      <textarea 
+                        name="description" 
+                        placeholder="Jelaskan detail layanan tambahan ini..." 
+                        className="w-full bg-slate-50 border border-slate-100 px-5 py-3.5 rounded-2xl text-xs font-bold h-24 resize-none focus:border-cyan-500 outline-none transition-all" 
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Sesi Add-on yang didapatkan</label>
+                      <div className="relative">
+                        <input 
+                          name="sesiCredit" 
+                          type="number" 
+                          placeholder="1" 
+                          defaultValue="1"
+                          className="w-full bg-slate-50 border border-slate-100 px-5 py-3.5 rounded-2xl text-xs font-bold focus:border-cyan-500 outline-none transition-all" 
+                          required 
+                        />
+                        <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[9px] font-black text-cyan-600 uppercase">Sesi</span>
+                      </div>
+                      <p className="text-[7px] font-bold text-slate-400 ml-2 mt-1">* Jumlah sesi yang akan didapatkan oleh siswa</p>
+                    </div>
+
+                    {/* Tombol Submit Cyan */}
+                    <button 
+                      disabled={isPending} 
+                      className="w-full bg-cyan-600 text-white py-4 mt-2 rounded-2xl font-black text-[10px] uppercase shadow-lg shadow-cyan-100 transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      {isPending ? <Loader2 className="animate-spin mx-auto" size={16}/> : "Simpan Add-on"}
+                    </button>
+                  </form>
+                )}
+                {modal.type === 'addon-edit' && (
+                <form 
+                  onSubmit={(e) => handleAction(e, (formData:FormData) => updateAddon(modal.data.id, formData))} 
+                  className="space-y-3"
+                >
+                  {/* Judul dengan skema warna Cyan - Edit Mode */}
+                  <h2 className="text-xl font-black text-cyan-600 uppercase italic mb-4">Edit Add-on</h2>
+                  
+                  {/* Nama Add-on */}
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Nama Add-on</label>
+                    <input 
+                      name="name" 
+                      defaultValue={modal.data?.name}
+                      placeholder="Nama add-on..." 
+                      className="w-full bg-slate-50 border border-slate-100 px-5 py-3.5 rounded-2xl text-xs font-bold focus:border-cyan-500 outline-none transition-all" 
+                      required 
+                    />
+                  </div>
+
+                  {/* Harga Add-on */}
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Harga Tambahan (IDR)</label>
+                    <div className="relative">
+                      <span className="absolute left-5 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">Rp</span>
+                      <input 
+                        name="price" 
+                        type="number" 
+                        defaultValue={modal.data?.price}
+                        placeholder="50000" 
+                        className="w-full bg-slate-50 border border-slate-100 pl-11 pr-5 py-3.5 rounded-2xl text-xs font-bold focus:border-cyan-500 outline-none transition-all" 
+                        required 
+                      />
+                    </div>
+                  </div>
+
+                  {/* Keterangan */}
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Deskripsi Layanan</label>
+                    <textarea 
+                      name="description" 
+                      defaultValue={modal.data?.description}
+                      placeholder="Detail layanan..." 
+                      className="w-full bg-slate-50 border border-slate-100 px-5 py-3.5 rounded-2xl text-xs font-bold h-24 resize-none focus:border-cyan-500 outline-none transition-all" 
+                    />
+                  </div>
+
+                  {/* Sesi Credit */}
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Sesi Add-on yang didapatkan</label>
+                    <div className="relative">
+                      <input 
+                        name="sesiCredit" 
+                        type="number" 
+                        defaultValue={modal.data?.sesiCredit || 1}
+                        placeholder="1" 
+                        className="w-full bg-slate-50 border border-slate-100 px-5 py-3.5 rounded-2xl text-xs font-bold focus:border-cyan-500 outline-none transition-all" 
+                        required 
+                      />
+                      <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[9px] font-black text-cyan-600 uppercase">Sesi</span>
+                    </div>
+                  </div>
+
+                  {/* Tombol Update Cyan */}
+                  <button 
+                    disabled={isPending} 
+                    className="w-full bg-cyan-600 text-white py-4 mt-2 rounded-2xl font-black text-[10px] uppercase shadow-lg shadow-cyan-100 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {isPending ? <Loader2 className="animate-spin mx-auto" size={16}/> : "Perbarui Add-on"}
+                  </button>
+                </form>
+              )}
               {modal.type === 'package' && (
                 <form onSubmit={(e) => handleAction(e, createPackage)} className="space-y-3">
                   <h2 className="text-xl font-black text-fuchsia-600 uppercase italic mb-4">Buat Paket Kursus</h2>
@@ -341,49 +561,63 @@ export default function ManagerClient({ initialLocations, initialSessions, initi
                   </button>
                 </form>
               )}
-              {modal.type === 'edit-package' && editingPackage && (
-                <form 
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    setIsPending(true);
-                    const formData = new FormData(e.currentTarget);
-                    // Memanggil handleAction dengan fungsi anonim agar bisa mengirim ID
-                    handleAction(e, () => updatePackage(editingPackage.id, formData));
-                  }} 
-                  className="space-y-3"
-                >
-                  <h2 className="text-xl font-black text-cyan-600 uppercase italic mb-4">Edit Paket</h2>
-                  
-                  <div className="space-y-1">
-                    <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Nama Paket</label>
-                    <input name="name" defaultValue={editingPackage.name} className="w-full bg-slate-50 border border-slate-100 px-5 py-3.5 rounded-2xl text-xs font-bold" required />
-                  </div>
+              {modal.type === 'edit-package' && modal.data && (
+  <form 
+    onSubmit={(e) => handleAction(e, (formData: FormData) => updatePackage(modal.data.id, formData))} 
+    className="space-y-3"
+  >
+    <h2 className="text-xl font-black text-cyan-600 uppercase italic mb-4">Edit Paket</h2>
+    
+    <div className="space-y-1">
+      <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Nama Paket</label>
+      <input 
+        name="name" 
+        defaultValue={modal.data.name} 
+        className="w-full bg-slate-50 border border-slate-100 px-5 py-3.5 rounded-2xl text-xs font-bold" 
+        required 
+      />
+    </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Sesi</label>
-                      <input name="sesiCredit" type="number" defaultValue={editingPackage.sesiCredit} className="w-full bg-slate-50 border border-slate-100 px-5 py-3.5 rounded-2xl text-xs font-bold" required />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Harga</label>
-                      <input name="price" type="number" defaultValue={editingPackage.price} className="w-full bg-slate-50 border border-slate-100 px-5 py-3.5 rounded-2xl text-xs font-bold" required />
-                    </div>
-                  </div>
+    <div className="grid grid-cols-2 gap-3">
+      <div className="space-y-1">
+        <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Sesi</label>
+        <input 
+          name="sesiCredit" 
+          type="number" 
+          defaultValue={modal.data.sesiCredit} 
+          className="w-full bg-slate-50 border border-slate-100 px-5 py-3.5 rounded-2xl text-xs font-bold" 
+          required 
+        />
+      </div>
+      <div className="space-y-1">
+        <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Harga</label>
+        <input 
+          name="price" 
+          type="number" 
+          defaultValue={modal.data.price} 
+          className="w-full bg-slate-50 border border-slate-100 px-5 py-3.5 rounded-2xl text-xs font-bold" 
+          required 
+        />
+      </div>
+    </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Deskripsi</label>
-                    <textarea 
-                      name="description" 
-                      defaultValue={typeof editingPackage.description === 'object' ? "" : editingPackage.description} 
-                      className="w-full bg-slate-50 border border-slate-100 px-5 py-3.5 rounded-2xl text-xs font-bold h-20 resize-none" 
-                    />
-                  </div>
+    <div className="space-y-1">
+      <label className="text-[8px] font-black text-slate-400 uppercase ml-2">Deskripsi</label>
+      <textarea 
+        name="description" 
+        defaultValue={typeof modal.data.description === 'object' ? "" : modal.data.description} 
+        className="w-full bg-slate-50 border border-slate-100 px-5 py-3.5 rounded-2xl text-xs font-bold h-20 resize-none" 
+      />
+    </div>
 
-                  <button disabled={isPending} className="w-full bg-cyan-600 text-white py-4 mt-2 rounded-2xl font-black text-[10px] uppercase shadow-lg">
-                    {isPending ? <Loader2 className="animate-spin mx-auto"/> : "Simpan Perubahan"}
-                  </button>
-                </form>
-              )}
+    <button 
+      disabled={isPending} 
+      className="w-full bg-cyan-600 text-white py-4 mt-2 rounded-2xl font-black text-[10px] uppercase shadow-lg active:scale-95 transition-transform"
+    >
+      {isPending ? <Loader2 className="animate-spin mx-auto" size={16}/> : "Simpan Perubahan"}
+    </button>
+  </form>
+)}
 
               {/* Form Ruangan (Gunakan logic select initialLocations) */}
               {modal.type === 'room' && (

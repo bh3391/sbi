@@ -21,21 +21,28 @@ export default async function LocationPaymentPage({ params }: PageProps) {
 
   // 1. Ambil Data Pembayaran
   const payments = await prisma.payment.findMany({
-    where: isAll 
-      ? {} // Jika 'all', ambil semua tanpa filter
-      : { student: { locationId: locationId } }, 
-    include: {
-      student: {
-        include: {
-          location: { select: { name: true } } // Butuh nama lokasi jika di halaman 'all'
-        }
-      },
-      createdBy: {
-        select: { nickname: true } 
+  where: isAll 
+    ? {} 
+    : { 
+        students: { 
+          some: { // Menggunakan 'some' karena students sekarang adalah array
+            locationId: locationId 
+          } 
+        } 
+      }, 
+  include: {
+    students: {
+      include: {
+        location: { select: { name: true } },
+        package: { select: { name: true, sesiCredit: true } } // Tambahkan ini jika butuh info paket
       }
     },
-    orderBy: { createdAt: 'desc' }
-  });
+    createdBy: {
+      select: { nickname: true } 
+    }
+  },
+  orderBy: { createdAt: 'desc' }
+});
 
   // 2. Ambil Data Siswa (untuk FAB)
   const students = await prisma.student.findMany({

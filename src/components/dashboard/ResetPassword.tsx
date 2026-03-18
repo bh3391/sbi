@@ -5,7 +5,14 @@ import { ShieldAlert, Eye, EyeOff, Lock, X, Loader2 } from "lucide-react";
 import { updateUserPassword } from "@/app/actions/users";
 import { Toaster, toast } from "sonner";
 
-export default function ResetPasswordModal({ userId, userName, onSuccess }: any) {
+interface ResetPasswordProps {
+  userId: string;
+  userName: string;
+  onSuccess: () => void;
+  onClose: () => void; // Pastikan ini ada di interface
+}
+
+export default function ResetPasswordModal({ userId, userName, onSuccess, onClose }: ResetPasswordProps) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -34,7 +41,7 @@ export default function ResetPasswordModal({ userId, userName, onSuccess }: any)
     loading: `Sedang mereset password ${userName}...`,
     success: (res: any) => {
       if (res.success) {
-        onSuccess();
+        onSuccess?.();
         return `Password ${userName} berhasil diperbarui!`;
       } else {
         throw new Error(res.message || "Gagal memperbarui database");
@@ -78,17 +85,17 @@ export default function ResetPasswordModal({ userId, userName, onSuccess }: any)
             <div className="p-3 bg-amber-50 text-amber-500 rounded-2xl shadow-sm">
               <ShieldAlert size={24} />
             </div>
-            {/* Tombol Close X */}
             <button 
-              type="button" // Pastikan type button agar tidak trigger submit form
-              onClick={(e) => {
-                e.preventDefault();
-                onSuccess();
-              }}
-              className="p-2 hover:bg-slate-100 active:bg-slate-200 rounded-full text-slate-400 transition-all"
-            >
-              <X size={20} />
-            </button>
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation(); // Mencegah event merambat ke element di bawahnya
+    onClose();
+      }}
+      className="p-2 hover:bg-slate-100 active:bg-slate-200 rounded-full text-slate-400 transition-all"
+    >
+      <X size={20} />
+    </button>
           </div>
 
           <div className="space-y-1">

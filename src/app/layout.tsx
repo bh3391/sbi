@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import NextTopLoader from 'nextjs-toploader';
+import AuthProvider from "@/components/providers/SessionsProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -42,6 +43,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <AuthProvider>
         <NextTopLoader
           color="#a5f3fc" // cyan-200
           initialPosition={0.08}
@@ -55,6 +57,7 @@ export default function RootLayout({
           template='<div class="bar" role="bar" style="background: linear-gradient(to right, #a5f3fc, #d946ef);"><div class="peg"></div></div>'
         />
         {children}
+        </AuthProvider>
       </body>
     </html>
   );

@@ -8,7 +8,7 @@ import {
 import { updateProcessStatusAction } from "@/app/actions/attendance";
 import { toast } from "sonner";
 
-// ... (Interface tetap sama)
+
 interface StudentLogModalProps {
   student: any;
   logs: any[];

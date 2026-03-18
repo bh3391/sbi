@@ -11,47 +11,80 @@ export async function saveAttendanceAction(data: any[], teacherId: string) {
       const logs = [];
 
       for (const item of data) {
-        // Logika Otomatis: Jika HADIR, processStatus otomatis DONE
+        // 1. Tentukan status proses akhir
         let finalProcessStatus = item.processStatus;
-        if (item.status === "HADIR") finalProcessStatus = "DONE";
-        if (item.status === "ALPA") finalProcessStatus = "DONE";
+        if (item.status === "HADIR" || item.status === "ALPA") {
+          finalProcessStatus = "DONE";
+        }
 
-        // 1. Simpan Log Absensi
+        // 2. PROTEKSI: Ambil data murid terbaru untuk cek sisa sesi
+        const currentStudent = await tx.student.findUnique({
+          where: { id: item.studentId },
+          select: { remainingSesi: true, addOnSesi: true, nickname: true }
+        });
+
+        if (!currentStudent) {
+          throw new Error(`Siswa dengan ID ${item.studentId} tidak ditemukan.`);
+        }
+
+        // 3. Logika Potong Sesi & Validasi Minus
+        if (item.status === "HADIR" || item.status === "ALPA") {
+          if (item.isAddon) {
+            // Validasi Kuota Add-on
+            if ((currentStudent.addOnSesi || 0) <= 0) {
+              throw new Error(`Kuota Add-on untuk ${currentStudent.nickname} sudah habis (0).`);
+            }
+
+            await tx.student.update({
+              where: { id: item.studentId },
+              data: { addOnSesi: { decrement: 1 } },
+            });
+          } else {
+            // Validasi Kuota Reguler
+            if ((currentStudent.remainingSesi || 0) <= 0) {
+              throw new Error(`Kuota Reguler untuk ${currentStudent.nickname} sudah habis (0).`);
+            }
+
+            await tx.student.update({
+              where: { id: item.studentId },
+              data: { remainingSesi: { decrement: 1 } },
+            });
+          }
+        }
+
+        if (item.isAddon && !item.addOn) {
+          console.error(`Peringatan: Murid ${item.studentId} ditandai Add-on tapi ID program (addOn) KOSONG.`);
+        }
+
+        // 4. Simpan Log Absensi (Hanya jika lolos validasi kuota di atas)
         const log = await tx.attendanceLog.create({
           data: {
             studentId: item.studentId,
             teacherId: teacherId,
             subjectId: item.subjectId,
             sessionId: item.sessionId,
-            status: item.status as AttendanceStatus,
-            processStatus: (finalProcessStatus || "LISTED") as ProcessStatus,
+            status: item.status,
+            processStatus: (finalProcessStatus || "LISTED"),
             score: item.score,
             materi: item.materi,
+            evaluation: item.evaluation || "",
+            isAddon: item.isAddon === true,
+            addonId: item.isAddon ? item.addOn : null,
             rescheduleDate: item.rescheduleDate ? new Date(item.rescheduleDate) : null,
           },
         });
-
-        // 2. Logika Potong Sesi (Hanya jika HADIR atau DONE)
-        if (item.status === "HADIR" || finalProcessStatus === "DONE") {
-          await tx.student.update({
-            where: { id: item.studentId },
-            data: {
-              remainingSesi: {
-                decrement: 1,
-              },
-            },
-          });
-        }
+        
         logs.push(log);
       }
       return logs;
     });
 
-    revalidatePath("/guru/absensi-siswa");
-    return { success: true, message: `${result.length} Laporan berhasil disimpan.` };
+    revalidatePath("/guru/agenda");
+    return { success: true, message: `Berhasil! ${result.length} laporan disimpan.` };
   } catch (error: any) {
     console.error("Database Error:", error);
-    return { success: false, message: "Gagal menyimpan ke database." };
+    // Mengembalikan pesan error yang spesifik (misal: "Kuota habis") ke UI
+    return { success: false, message: error.message || "Gagal menyimpan ke database." };
   }
 }
 

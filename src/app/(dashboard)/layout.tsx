@@ -10,15 +10,15 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
-  const role = session?.user?.role;
-
+  
   // 1. Cek apakah sudah login
   if (!session) {
     redirect("/entrance-guru");
   }
 
-  // 2. Logika Redirect Berdasarkan Role (Pemisahan Rute)
-  // Pastikan Admin tidak nyasar ke folder lain dan Teacher tidak masuk ke /admin
+  const role = session.user?.role;
+
+  // 2. Logika Redirect Berdasarkan Role
   const isAllowed = role === "ADMIN" || role === "TEACHER";
 
   if (!isAllowed) {
@@ -26,26 +26,19 @@ export default async function DashboardLayout({
     redirect("/"); 
   }
 
-  // Catatan: Next.js v13+ Layout tidak memiliki akses langsung ke current pathname.
-  // Proteksi spesifik rute (Admin tidak boleh ke /guru dst) 
-  // sebaiknya tetap ada di masing-masing page.tsx atau middleware.
-  // Namun, kita bisa memastikan data role dilempar ke komponen anak jika perlu.
-
   return (
-    <div className="min-h-screen bg-cyan-50/50 relative w-full rounded-2xl overflow-x-hidden font-sans">
-      
-      
-
+    <div className="min-h-screen bg-cyan-50/50 relative w-full overflow-x-hidden font-sans">
       {/* Konten Utama */}
-      <main className="pb-24 max-w-md mx-auto min-h-screen relative px-1 pt-2">
-        {/* Header Info (Opsional - Bagus untuk Debugging/Status) */}
+      {/* pb-24 memastikan konten tidak tertutup oleh BottomNav yang melayang */}
+      <main className="pb-24 max-w-md mx-auto min-h-screen relative pt-0 px-0">
         
-
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-          {children}
           <Toaster position="top-center" richColors />
-          {/* Kirim role ke BottomNav agar menu menyesuaikan */}
-          <BottomNav  />
+          
+          {children}
+          
+          {/* Kirim role ke BottomNav sebagai props (Client Component) */}
+          <BottomNav role={role} />
         </div>
       </main>
     </div>

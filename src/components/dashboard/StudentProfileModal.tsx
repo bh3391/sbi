@@ -7,6 +7,7 @@ import {
 import { QRCodeSVG } from "qrcode.react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useSession } from "next-auth/react";
 
 interface StudentProfileModalProps {
   student: any;
@@ -16,6 +17,9 @@ interface StudentProfileModalProps {
 
 export default function StudentProfileModal({ student, onClose, onEdit }: StudentProfileModalProps) {
   const [copied, setCopied] = useState(false);
+ 
+  const { data: session } = useSession();
+  const user = session?.user;
 
   if (!student) return null;
 
@@ -153,8 +157,10 @@ export default function StudentProfileModal({ student, onClose, onEdit }: Studen
             {[
               { icon: <User size={14} className="text-fuchsia-500" />, label: "Orang Tua", value: student.parentName },
               { icon: <MapPin size={14} className="text-cyan-500" />, label: "Lokasi", value: student.locationName },
-              { icon: <Award size={14} className="text-amber-500" />, label: "Paket", value: student.package?.name || "Reguler" },
-              { icon: <Phone size={14} className="text-emerald-500" />, label: "WhatsApp", value: student.parentContact || "-" },
+              { icon: <Award size={14} className="text-amber-500" />, label: "Paket", value: student.packageId.name || "Reguler" },
+              { icon: <Award size={14} className="text-amber-500" />, label: "Kuota Sesi", value: student.remainingSesi || "Habis" },
+              { icon: <Award size={14} className="text-amber-500" />, label: "Add On Sesi", value: student.addOnSesi || "-" },
+              
             ].map((item, idx) => (
               <div key={idx} className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-colors">
                 <div className="flex items-center gap-3">
@@ -168,14 +174,16 @@ export default function StudentProfileModal({ student, onClose, onEdit }: Studen
 
           {/* Footer Action */}
           <div className="flex gap-3 pt-2">
-            <a 
-              href={`https://wa.me/${student.parentContact?.replace(/\D/g,'')}`} 
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-[2] bg-slate-900 text-white py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 active:scale-95 transition-all shadow-xl shadow-slate-200"
-            >
-              <MessageCircle size={16} /> Hubungi Orang Tua
-            </a>
+            {user?.role !== "TEACHER" && (
+              <a 
+                href={`https://wa.me/${student.parentContact?.replace(/\D/g,'')}`} 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-[2] bg-slate-900 text-white py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 active:scale-95 transition-all shadow-xl shadow-slate-200"
+              >
+                <MessageCircle size={16} /> Hubungi Orang Tua
+              </a>
+            )}
             <button 
               onClick={() => onEdit(student)}
               className="flex-1 bg-white border-2 border-slate-100 text-slate-600 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest active:bg-slate-50 transition-all hover:border-cyan-200"

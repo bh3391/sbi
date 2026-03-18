@@ -2,7 +2,7 @@ import prisma from "@/lib/prisma";
 import ManagerClient from "./ManagerClient";
 
 export default async function ManagerPage() {
-  const [locations, sessions, subjects, packages] = await Promise.all([
+  const [locations, sessions, subjects, packages,addons] = await Promise.all([
   prisma.location.findMany({ 
     include: { 
       // Mengambil daftar detail ruangan
@@ -19,6 +19,8 @@ export default async function ManagerPage() {
   prisma.studentSession.findMany({ orderBy: { startTime: 'asc' } }),
   prisma.subject.findMany({ orderBy: { name: 'asc' } }),
   prisma.package.findMany({ orderBy: { name: 'asc' } }),
+  prisma.addon.findMany({ orderBy: { name: 'asc' } })
+  
 ]);
   
 
@@ -29,6 +31,7 @@ export default async function ManagerPage() {
         initialSessions={sessions} 
         initialSubjects={subjects}
         initialPackages={packages}
+        initialAddons={addons}
         
       />
     </div>

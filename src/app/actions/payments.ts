@@ -16,14 +16,15 @@ export async function handleConfirm(paymentId: string) {
       throw new Error("Unauthorized: Anda harus login untuk melakukan verifikasi.");
     }
 
-    // 1. Jalankan Database Transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Ambil data pembayaran beserta info paket siswa
       const pay = await tx.payment.findUnique({
         where: { id: paymentId },
         include: {
-          student: {
-            include: { package: true },
+          students: { 
+            include: { 
+              package: true,
+              addons: true // Ambil data addons yang terhubung dengan siswa
+            },
           },
         },
       });
@@ -31,8 +32,8 @@ export async function handleConfirm(paymentId: string) {
       if (!pay) throw new Error("Data pembayaran tidak ditemukan.");
       if (pay.status === "SUCCESS") throw new Error("Pembayaran ini sudah diverifikasi sebelumnya.");
 
-      // A. Update status pembayaran menjadi SUCCESS
-      const updatedPayment = await tx.payment.update({
+      // A. Update status pembayaran
+      await tx.payment.update({
         where: { id: paymentId },
         data: {
           status: "SUCCESS",
@@ -41,78 +42,90 @@ export async function handleConfirm(paymentId: string) {
         },
       });
 
-      // B. Logika Penambahan Sesi
+      // B. Update Sesi Siswa
       const sessionBoostingCategories = ["RENEWAL", "REGISTRATION", "REACTIVATION"];
-      let sessionsEarned = 0;
+      const updateReports: any[] = [];
 
       if (sessionBoostingCategories.includes(pay.category || "")) {
-        // Ambil sesiCredit dari paket, jika null maka 0
-        sessionsEarned = pay.student.package?.sesiCredit || 0;
+        for (const student of pay.students) {
+          // Hitung Sesi dari Paket Utama
+          const sessionsEarned = student.package?.sesiCredit || 0;
+          
+          // Hitung Sesi dari semua Addons yang dipilih
+          const addOnSessionsEarned = student.addons.reduce((sum, addon) => sum + (addon.sesiCredit || 0), 0);
+          
+          if (sessionsEarned > 0 || addOnSessionsEarned > 0) {
+            const updatedStudent = await tx.student.update({
+              where: { id: student.id },
+              data: {
+                remainingSesi: { increment: sessionsEarned },
+                addOnSesi: { increment: addOnSessionsEarned }, // Update kolom baru
+                status: "ACTIVE",
+              },
+            });
 
-        if (sessionsEarned > 0) {
-          await tx.student.update({
-            where: { id: pay.studentId },
-            data: {
-              remainingSesi: { increment: sessionsEarned },
-              status: "ACTIVE", // Pastikan murid otomatis aktif setelah bayar
-            },
-          });
+            updateReports.push({
+              fullName: student.fullName,
+              parentName: student.parentName,
+              parentContact: student.parentContact,
+              sessionsEarned,
+              addOnSessionsEarned,
+              newTotalSesi: updatedStudent.remainingSesi,
+              newAddOnSesi: updatedStudent.addOnSesi,
+            });
+          }
         }
       }
 
-      // Kembalikan data yang dibutuhkan untuk WhatsApp
-      return {
-        pay: pay,
-        sessionsEarned,
-        // Kalkulasi sesi sekarang untuk dikirim ke WA (Sesi awal + penambahan)
-        newTotalSesi: (pay.student.remainingSesi || 0) + sessionsEarned,
-      };
+      return { pay, updateReports };
     });
 
-    // 2. Notifikasi WhatsApp (Diluar transaction agar tidak blocking)
-    const parentContact = result.pay.student.parentContact;
-    
-    // Perbaikan error 'string | null': Pastikan contact ada sebelum panggil fungsi
-    if (parentContact) {
-      const { pay, sessionsEarned, newTotalSesi } = result;
+    // 2. Notifikasi WhatsApp (Grouping by Parent Contact)
+    const reportsByContact = result.updateReports.reduce((acc: any, curr: any) => {
+      if (!acc[curr.parentContact]) acc[curr.parentContact] = [];
+      acc[curr.parentContact].push(curr);
+      return acc;
+    }, {});
+
+    for (const contact in reportsByContact) {
+      const children = reportsByContact[contact];
+      const parentName = children[0].parentName;
+      
+      const sessionDetails = children.map((c: any) => {
+        let detail = `• *${c.fullName}*:\n`;
+        detail += `  - Paket: +${c.sessionsEarned} (Total: ${c.newTotalSesi})`;
+        if (c.addOnSessionsEarned > 0) {
+          detail += `\n  - Add-on: +${c.addOnSessionsEarned} (Total: ${c.newAddOnSesi})`;
+        }
+        return detail;
+      }).join("\n\n");
 
       const message = 
         `*✅ PEMBAYARAN TERVERIFIKASI*\n\n` +
-        `Halo Ayah/Bunda *${pay.student.parentName}*,\n` +
-        `Pembayaran untuk Ananda *${pay.student.fullName}* telah kami terima dan diverifikasi. Terima kasih! 🙏\n\n` +
+        `Halo Ayah/Bunda *${parentName}*,\n` +
+        `Pembayaran tagihan telah diverifikasi. Sesi belajar telah ditambahkan ke akun Ananda. 🙏\n\n` +
         `*RINCIAN TRANSAKSI:*\n` +
-        `• Kategori: ${pay.category}\n` +
-        `• Nominal: Rp ${pay.amount.toLocaleString("id-ID")}\n` +
-        `• Tanggal: ${new Date().toLocaleDateString("id-ID")}\n` +
+        `• Kategori: ${result.pay.category}\n` +
+        `• Nominal: Rp ${result.pay.amount.toLocaleString("id-ID")}\n` +
         `--------------------------------\n` +
-        `*UPDATE SESI BELAJAR:*\n` +
-        `• Sesi Didapat: +${sessionsEarned}\n` +
-        `• *Total Sesi Aktif: ${newTotalSesi} Sesi*\n` +
+        `*UPDATE SESI BELAJAR:*\n\n` +
+        `${sessionDetails}\n` +
         `--------------------------------\n\n` +
-        `Selamat belajar dan sampai jumpa di kelas! ✨`;
+        `Selamat belajar! ✨`;
 
-      // Menggunakan try-catch kecil agar error WA tidak membatalkan suksesnya database
       try {
-        await sendFonneNotification(parentContact, message);
+        await sendFonneNotification(contact, message);
       } catch (waError) {
-        console.error("Gagal mengirim WhatsApp:", waError);
+        console.error(`Gagal mengirim WA:`, waError);
       }
     }
 
-    // 3. Revalidate cache agar UI langsung update
     revalidatePath(`/admin/payment`, "layout");
-    
-    return { 
-      success: true, 
-      message: "Pembayaran berhasil diverifikasi dan sesi telah ditambahkan!" 
-    };
+    return { success: true, message: "Verifikasi berhasil!" };
 
   } catch (error: any) {
     console.error("Confirm Payment Error:", error);
-    return { 
-      success: false, 
-      message: error instanceof Error ? error.message : "Terjadi kesalahan sistem saat verifikasi" 
-    };
+    return { success: false, message: error.message || "Gagal verifikasi" };
   }
 }
 
@@ -138,9 +151,9 @@ export async function createManualPayment(formData: FormData) {
     }
 
     const result = await prisma.$transaction(async (tx) => {
+      // 1. Buat Payment dan hubungkan ke Student (Many-to-Many)
       const payment = await tx.payment.create({
         data: {
-          studentId,
           amount: parseFloat(amount),
           category,
           method,
@@ -149,21 +162,27 @@ export async function createManualPayment(formData: FormData) {
           year: parseInt(year),
           notes,
           createdById: currentUserId || null,
+          // MENGGUNAKAN CONNECT UNTUK SKEMA BARU
+          students: {
+            connect: { id: studentId }
+          }
         },
         include: { 
-          student: {
+          students: {
+            where: { id: studentId }, // Kita ambil data siswa spesifik ini saja
             include: { package: true }
           }
         }
       });
 
+      const student = payment.students[0]; // Ambil target siswa
       let sessionsAdded = 0;
       const sessionBoostingCategories = ["REGISTRATION", "RENEWAL", "REACTIVATION"];
       
-      // Sesi bertambah otomatis HANYA jika CASH (karena status langsung SUCCESS)
+      // Sesi bertambah otomatis HANYA jika CASH/SUCCESS
       if (sessionBoostingCategories.includes(category) && method !== "TRANSFER") {
-        if (payment.student?.package) {
-          sessionsAdded = payment.student.package.sesiCredit;
+        if (student.package) {
+          sessionsAdded = student.package.sesiCredit;
           await tx.student.update({
             where: { id: studentId },
             data: {
@@ -176,20 +195,20 @@ export async function createManualPayment(formData: FormData) {
 
       return { 
         payment, 
+        student, // Kita kirim balik data student untuk WA
         sessionsAdded, 
-        newTotalSesi: (payment.student.remainingSesi || 0) + sessionsAdded 
+        newTotalSesi: (student.remainingSesi || 0) + sessionsAdded 
       };
     });
 
-    // LOGIKA NOTIFIKASI WHATSAPP BERDASARKAN KATEGORI & METODE
-    const parentContact = result.payment.student.parentContact;
+    // 2. LOGIKA NOTIFIKASI WHATSAPP
+    const { payment, student, sessionsAdded, newTotalSesi } = result;
+    const parentContact = student.parentContact;
+
     if (parentContact) {
-      const { payment, sessionsAdded, newTotalSesi } = result;
       const isTransfer = payment.method === "TRANSFER";
       const cat = payment.category;
       const amountStr = payment.amount.toLocaleString('id-ID');
-      const studentName = payment.student.fullName;
-      const parentName = payment.student.parentName;
 
       let header = "";
       let body = "";
@@ -197,34 +216,34 @@ export async function createManualPayment(formData: FormData) {
       if (cat === "REGISTRATION") {
         if (isTransfer) {
           header = `*⏳ PENDAFTARAN - MENUNGGU KONFIRMASI*`;
-          body = `Pendaftaran Ananda *${studentName}* telah diterima. Mohon kirimkan bukti transfer sebesar *Rp ${amountStr}* untuk *Aktivasi Sesi Belajar*.`;
+          body = `Pendaftaran Ananda *${student.fullName}* telah diterima. Mohon kirimkan bukti transfer sebesar *Rp ${amountStr}* untuk *Aktivasi Sesi Belajar*.`;
         } else {
           header = `*✅ PENDAFTARAN - TRANSAKSI BERHASIL*`;
-          body = `Pendaftaran Ananda *${studentName}* telah berhasil. Sesi belajar telah aktif sebanyak *${newTotalSesi} Sesi*.`;
+          body = `Pendaftaran Ananda *${student.fullName}* telah berhasil. Sesi belajar telah aktif sebanyak *${newTotalSesi} Sesi*.`;
         }
       } 
       else if (cat === "RENEWAL") {
         if (isTransfer) {
           header = `*⏳ RENEWAL - MENUNGGU KONFIRMASI*`;
-          body = `Permintaan perpanjangan sesi Ananda *${studentName}* telah diterima. Sesi akan bertambah otomatis setelah bukti transfer *Rp ${amountStr}* diverifikasi Admin.`;
+          body = `Permintaan perpanjangan sesi Ananda *${student.fullName}* telah diterima. Sesi akan bertambah otomatis setelah bukti transfer *Rp ${amountStr}* diverifikasi Admin.`;
         } else {
           header = `*🔄 PERPANJANGAN BERHASIL*`;
-          body = `Perpanjangan sesi Ananda *${studentName}* sukses. Sesi bertambah +${sessionsAdded}. Total sesi sekarang: *${newTotalSesi} Sesi*.`;
+          body = `Perpanjangan sesi Ananda *${student.fullName}* sukses. Sesi bertambah +${sessionsAdded}. Total sesi sekarang: *${newTotalSesi} Sesi*.`;
         }
       }
       else if (cat === "DEPOSIT") {
         header = `*💰 DEPOSIT DITERIMA*`;
-        body = `Deposit sejumlah *Rp ${amountStr}* untuk Ananda *${studentName}* telah kami terima melalui ${payment.method}. Dana akan tersimpan sebagai saldo cadangan.`;
+        body = `Deposit sejumlah *Rp ${amountStr}* untuk Ananda *${student.fullName}* telah kami terima melalui ${payment.method}. Dana akan tersimpan sebagai saldo cadangan.`;
       }
       else {
         header = `*📩 PEMBAYARAN DITERIMA*`;
         const noteDetail = payment.notes ? `(${payment.notes})` : "";
-        body = `Pembayaran ${noteDetail} sejumlah *Rp ${amountStr}* untuk Ananda *${studentName}* telah kami terima.`;
+        body = `Pembayaran ${noteDetail} sejumlah *Rp ${amountStr}* untuk Ananda *${student.fullName}* telah kami terima.`;
       }
 
       const waMessage = 
         `${header}\n\n` +
-        `Halo Ayah/Bunda *${parentName}*,\n` +
+        `Halo Ayah/Bunda *${student.parentName}*,\n` +
         `${body}\n\n` +
         `--------------------------------\n` +
         `Metode: ${payment.method}\n` +

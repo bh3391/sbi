@@ -134,7 +134,8 @@ export default function TeacherProfileModal({ teacher, onClose }: any) {
                   onSuccess={() => {
                     
                     setIsResetting(false);
-                  }} 
+                  }}
+                  onClose={() => setIsResetting(false)}
                 />
                 <button 
                   onClick={() => setIsResetting(false)}
