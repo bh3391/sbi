@@ -24,21 +24,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const isMatch = await bcrypt.compare(
           credentials.password as string,
-          user.password
+          user.password,
         );
 
         if (!isMatch) return null;
 
         // LOG untuk memastikan data dari DB keluar sebelum masuk ke JWT
-        
 
-        // Mengembalikan objek user. 
+        // Mengembalikan objek user.
         // Sangat penting: Cast user.role menjadi String untuk menghindari masalah serialisasi Enum.
         return {
           id: user.id,
           name: user.name,
           email: user.email,
-          role: String(user.role), 
+          role: String(user.role),
         };
       },
     }),
@@ -50,7 +49,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id;
         token.role = (user as any).role;
       }
-      
+
       // Handle update session secara manual jika diperlukan (optional)
       if (trigger === "update" && session) {
         return { ...token, ...session.user };
@@ -65,8 +64,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.id as string;
         // @ts-ignore
         session.user.role = token.role as string;
-        
-        
       }
       return session;
     },

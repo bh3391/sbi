@@ -11,9 +11,9 @@ export default async function AbsensiSiswaPage() {
   const endOfDay = new Date();
   endOfDay.setHours(23, 59, 59, 999);
 
-  const [students, subjects, sessions] = await Promise.all([
+  const [students, subjects, sessions, locations, addons] = await Promise.all([
     prisma.student.findMany({
-      include: { 
+      include: {
         location: true,
         attendances: {
           where: {
@@ -23,12 +23,14 @@ export default async function AbsensiSiswaPage() {
             },
           },
           orderBy: { createdAt: "desc" },
-        }
+        },
       },
       orderBy: { fullName: "asc" },
     }),
     prisma.subject.findMany({ orderBy: { name: "asc" } }),
     prisma.studentSession.findMany({ orderBy: { startTime: "asc" } }),
+    prisma.location.findMany({ orderBy: { name: "asc" } }),
+    prisma.addon.findMany({ orderBy: { name: "asc" } }),
   ]);
 
   return (
@@ -38,6 +40,8 @@ export default async function AbsensiSiswaPage() {
       initialStudents={students}
       initialSubjects={subjects}
       initialSessions={sessions}
+      locations={locations}
+      dataAddon={addons}
     />
   );
 }

@@ -1,5 +1,5 @@
-"use server"
-import  prisma  from "@/lib/prisma";
+"use server";
+import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
 export async function updateStock(formData: FormData) {
@@ -15,7 +15,7 @@ export async function updateStock(formData: FormData) {
       const change = type === "IN" ? quantity : -quantity;
       const updated = await tx.inventory.update({
         where: { id: inventoryId },
-        data: { stock: { increment: change } }
+        data: { stock: { increment: change } },
       });
 
       if (updated.stock < 0) throw new Error("Stok tidak boleh minus!");
@@ -27,8 +27,8 @@ export async function updateStock(formData: FormData) {
           quantity,
           type,
           notes,
-          createdById: currentUserId
-        }
+          createdById: currentUserId,
+        },
       });
     });
 

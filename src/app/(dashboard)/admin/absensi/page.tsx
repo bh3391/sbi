@@ -1,6 +1,6 @@
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import AbsensiGuruClient from "./AbsensiGuruClient";  
+import AbsensiGuruClient from "./AbsensiGuruClient";
 
 export default async function AbsensiGuruPage() {
   const session = await auth();
@@ -11,10 +11,9 @@ export default async function AbsensiGuruPage() {
   const endOfDay = new Date();
   endOfDay.setHours(23, 59, 59, 999);
 
-  const [teachers,sessions] = await Promise.all([
+  const [teachers, sessions] = await Promise.all([
     prisma.user.findMany({
-      include: { 
-        
+      include: {
         teacherAttendances: {
           where: {
             createdAt: {
@@ -23,7 +22,7 @@ export default async function AbsensiGuruPage() {
             },
           },
           orderBy: { createdAt: "desc" },
-        }
+        },
       },
       orderBy: { name: "asc" },
     }),
@@ -32,7 +31,6 @@ export default async function AbsensiGuruPage() {
   ]);
 
   return (
-    
     <AbsensiGuruClient
       teacherName={session?.user?.name || "Guru"}
       teacherId={session?.user?.id || ""}

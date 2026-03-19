@@ -1,17 +1,21 @@
 import prisma from "@/lib/prisma";
 import Link from "next/link";
+import { auth } from "@/lib/auth";
 import { Building2, ChevronRight, MapPin } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/header";
 
 export default async function SelectLocationPage() {
+  const session = await auth();
+  const userId = session?.user?.id || "";
+
   const locations = await prisma.location.findMany({
     include: { _count: { select: { rooms: true } } },
-    orderBy: { name: "asc" }
+    orderBy: { name: "asc" },
   });
 
   return (
     <main className="p-2 bg-cyan-50 min-h-screen">
-      <DashboardHeader title="Pilih Lokasi" />
+      <DashboardHeader userId={userId} title="Pilih Lokasi" />
 
       <div className="grid grid-cols-1 mt-4 gap-2">
         {locations.map((loc) => (
@@ -22,19 +26,30 @@ export default async function SelectLocationPage() {
                   <Building2 size={12} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-800 text-sm leading-none">{loc.name}</h3>
+                  <h3 className="font-bold text-slate-800 text-sm leading-none">
+                    {loc.name}
+                  </h3>
                   <div className="flex items-center gap-2 mt-2">
                     <MapPin size={10} className="text-slate-800" />
-                    <p className="text-[6px] italic text-slate-400 uppercase">{loc.address || "Alamat belum diatur"}</p>
+                    <p className="text-[6px] italic text-slate-400 uppercase">
+                      {loc.address || "Alamat belum diatur"}
+                    </p>
                   </div>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <div className="text-right">
-                  <p className="text-[10px] font-black text-slate-900">{loc._count.rooms}</p>
-                  <p className="text-[8px] font-bold text-slate-400 uppercase">Kelas</p>
+                  <p className="text-[10px] font-black text-slate-900">
+                    {loc._count.rooms}
+                  </p>
+                  <p className="text-[8px] font-bold text-slate-400 uppercase">
+                    Kelas
+                  </p>
                 </div>
-                <ChevronRight size={20} className="text-slate-800 group-hover:text-fuchsia-500 transition-colors" />
+                <ChevronRight
+                  size={20}
+                  className="text-slate-800 group-hover:text-fuchsia-500 transition-colors"
+                />
               </div>
             </div>
           </Link>

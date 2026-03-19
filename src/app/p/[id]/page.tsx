@@ -2,10 +2,10 @@ import prisma from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import StudentPublicClient from "./StudentProfileClient";
 
-export default async function StudentPublicProfile({ 
-  params 
-}: { 
-  params: Promise<{ id: string }> 
+export default async function StudentPublicProfile({
+  params,
+}: {
+  params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
 
@@ -14,15 +14,15 @@ export default async function StudentPublicProfile({
     include: {
       package: true,
       attendances: {
-        orderBy: { date: 'desc' },
+        orderBy: { date: "desc" },
         take: 5,
       },
       payment: {
         where: { status: "SUCCESS" },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         take: 10,
-      }
-    }
+      },
+    },
   });
 
   if (!student) notFound();

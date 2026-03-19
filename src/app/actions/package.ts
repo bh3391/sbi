@@ -41,13 +41,13 @@ export async function deletePackage(id: string) {
   try {
     // Cek apakah paket sedang digunakan oleh siswa
     const usageCount = await prisma.student.count({
-      where: { packageId: id }
+      where: { packageId: id },
     });
 
     if (usageCount > 0) {
-      return { 
-        success: false, 
-        message: `Gagal hapus! Paket ini sedang digunakan oleh ${usageCount} siswa.` 
+      return {
+        success: false,
+        message: `Gagal hapus! Paket ini sedang digunakan oleh ${usageCount} siswa.`,
       };
     }
 
@@ -58,7 +58,10 @@ export async function deletePackage(id: string) {
     revalidatePath("/admin/settings");
     return { success: true, message: "Paket berhasil dihapus." };
   } catch (error) {
-    return { success: false, message: "Terjadi kesalahan server saat menghapus." };
+    return {
+      success: false,
+      message: "Terjadi kesalahan server saat menghapus.",
+    };
   }
 }
 
@@ -75,8 +78,8 @@ export async function updatePackage(id: string, formData: FormData) {
         name,
         price: parseInt(price),
         sesiCredit: parseInt(sesiCredit),
-        description: description || ""
-      }
+        description: description || "",
+      },
     });
     revalidatePath("/admin/manager");
     return { success: true };

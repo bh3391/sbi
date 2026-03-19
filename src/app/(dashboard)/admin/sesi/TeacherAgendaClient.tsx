@@ -5,8 +5,8 @@ import { Clock, Users, ChevronRight } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import AttendanceSheet from "@/components/dashboard/AttendanceSheet";
 import DashboardHeader from "@/components/dashboard/header";
- import { getTeacherAgenda } from "@/app/actions/schedule"; 
- import { toast } from "sonner";
+import { getTeacherAgenda } from "@/app/actions/schedule";
+import { toast } from "sonner";
 
 interface TeacherAgendaProps {
   initialSchedules: any[];
@@ -20,19 +20,21 @@ interface ScheduleData {
   room: { name: string };
   session: { name: string; startTime: string };
   subject: { name: string };
-  students: { id: string; nickname: string; fullName: string; imageProfile: string | null }[];
+  students: {
+    id: string;
+    nickname: string;
+    fullName: string;
+    imageProfile: string | null;
+  }[];
 }
 
-export default function TeacherAgendaClient({ 
-  initialSchedules, 
-  allTeachers, 
+export default function TeacherAgendaClient({
+  initialSchedules,
+  allTeachers,
   currentUser,
   today,
   dataAddons,
 }: TeacherAgendaProps) {
-
-  
-
   const [selectedTeacherId, setSelectedTeacherId] = useState(currentUser.id);
   // Simpan initialSchedules ke state agar bisa diupdate jika admin memilih guru lain
   const [schedules, setSchedules] = useState(initialSchedules);
@@ -48,58 +50,60 @@ export default function TeacherAgendaClient({
   // Handler jika Admin memilih guru lain
   // Catatan: Di sini idealnya Anda memanggil server action untuk fetch jadwal guru tersebut
   const handleTeacherChange = async (teacherId: string) => {
-  setSelectedTeacherId(teacherId);
-  
-  const res = await getTeacherAgenda(teacherId);
-  
-  if (res.success && res.data) {
-    // Gunakan res.data as any[] jika ingin cepat, 
-    // atau pastikan res.data tidak undefined dengan []
-    setSchedules(res.data); 
-  } else {
-    // Jika gagal atau data kosong, set ke array kosong agar tidak error
-    setSchedules([]); 
-    toast.error(res.error || "Gagal memuat jadwal");
-  }
-};
+    setSelectedTeacherId(teacherId);
 
-  const todayFormatted = new Intl.DateTimeFormat('id-ID', { 
-    weekday: 'long', 
-    day: 'numeric', 
-    month: 'long', 
-    year: 'numeric' 
+    const res = await getTeacherAgenda(teacherId);
+
+    if (res.success && res.data) {
+      // Gunakan res.data as any[] jika ingin cepat,
+      // atau pastikan res.data tidak undefined dengan []
+      setSchedules(res.data);
+    } else {
+      // Jika gagal atau data kosong, set ke array kosong agar tidak error
+      setSchedules([]);
+      toast.error(res.error || "Gagal memuat jadwal");
+    }
+  };
+
+  const todayFormatted = new Intl.DateTimeFormat("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
   }).format(new Date());
 
   return (
     <div className="bg-cyan-50  rounded-2xl shadow-sm">
       <div className="p-1">
-        <DashboardHeader title="Agenda Mengajar"  />
-        
-        
+        <DashboardHeader userId={"currentUser.id"} title="Agenda Mengajar" />
       </div>
       {/* DROPDOWN PILIH GURU (Hanya untuk Admin) */}
       <div className="p-2">
         {isAdmin && (
           <div className="flex flex-col items-start gap-2 p-2 mb-1">
-             <label className="text-[9px] font-black text-cyan-600 uppercase tracking-tighter">Pilih guru</label>
-             <select 
-               value={selectedTeacherId}
-               onChange={(e) => handleTeacherChange(e.target.value)}
-               className="bg-white border border-cyan-200 text-xs font-bold p-2 px-6 rounded-xl outline-none focus:ring-2 focus:ring-cyan-500 shadow-sm"
-             >
-               {allTeachers.map(t => (
-                 <option key={t.id} value={t.id}>{t.nickname || t.fullName}</option>
-               ))}
-             </select>
+            <label className="text-[9px] font-black text-cyan-600 uppercase tracking-tighter">
+              Pilih guru
+            </label>
+            <select
+              value={selectedTeacherId}
+              onChange={(e) => handleTeacherChange(e.target.value)}
+              className="bg-white border border-cyan-200 text-xs font-bold p-2 px-6 rounded-xl outline-none focus:ring-2 focus:ring-cyan-500 shadow-sm"
+            >
+              {allTeachers.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.nickname || t.fullName}
+                </option>
+              ))}
+            </select>
           </div>
         )}
-        </div>
+      </div>
 
       {/* LIST JADWAL */}
       <div className="space-y-1 p-1">
         {schedules.length > 0 ? (
           schedules.map((item) => (
-            <div 
+            <div
               key={item.id}
               onClick={() => setSelectedSchedule(item)} // KONEKSI: Buka AttendanceSheet
               className="bg-white border border-slate-100 p-2 rounded-lg shadow-sm relative overflow-hidden group hover:border-cyan-200 active:scale-[0.98] transition-all cursor-pointer"
@@ -108,8 +112,12 @@ export default function TeacherAgendaClient({
                 <div className="flex gap-4">
                   {/* Waktu Sesi */}
                   <div className="flex flex-col items-center justify-center bg-slate-900 text-white p-2 rounded-2xl min-w-[50px] shadow-lg shadow-slate-200">
-                    <span className="text-[6px] font-black uppercase opacity-60">Mulai</span>
-                    <span className="text-sm font-black ">{item.session.startTime}</span>
+                    <span className="text-[6px] font-black uppercase opacity-60">
+                      Mulai
+                    </span>
+                    <span className="text-sm font-black ">
+                      {item.session.startTime}
+                    </span>
                   </div>
 
                   <div className="flex flex-col justify-center">
@@ -143,9 +151,11 @@ export default function TeacherAgendaClient({
 
               {/* Progress bar kapasitas kelas */}
               <div className="mt-2 w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                <div 
-                  className="bg-cyan-500 h-full transition-all duration-500" 
-                  style={{ width: `${((item.students?.length || 0) / 5) * 100}%` }}
+                <div
+                  className="bg-cyan-500 h-full transition-all duration-500"
+                  style={{
+                    width: `${((item.students?.length || 0) / 5) * 100}%`,
+                  }}
                 />
               </div>
             </div>
@@ -153,7 +163,7 @@ export default function TeacherAgendaClient({
         ) : (
           <div className="text-center py-24 bg-white rounded-[3rem] border-2 border-dashed border-slate-200">
             <div className="bg-white w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-sm">
-               <Clock size={32} className="text-fuchsia-500" />
+              <Clock size={32} className="text-fuchsia-500" />
             </div>
             <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">
               Tidak ada jadwal mengajar
@@ -165,12 +175,11 @@ export default function TeacherAgendaClient({
       {/* DRAWER / SHEET ABSENSI */}
       <AnimatePresence>
         {selectedSchedule && (
-          <AttendanceSheet 
-            schedule={selectedSchedule} 
-            teacherId={selectedTeacherId} 
-            onClose={() => setSelectedSchedule(null)} 
+          <AttendanceSheet
+            schedule={selectedSchedule}
+            teacherId={selectedTeacherId}
+            onClose={() => setSelectedSchedule(null)}
             dataAddon={dataAddons}
-            
           />
         )}
       </AnimatePresence>

@@ -17,7 +17,7 @@ model User {
   role           Role    @default(TEACHER)
   specialization String?
   isRemote       Boolean @default(false)
-
+  contact        String?
   qrCodeId           String?             @unique @default(uuid())
   homebaseId         String?
   accounts           Account[]
@@ -28,7 +28,18 @@ model User {
   inventoryLogs      InventoryLog[]
   paymentsCreated    Payment[]           @relation("PaymentCreator")
   paymentsVerified   Payment[]           @relation("PaymentVerifier")
-  schedules Schedule[]
+  schedules          Schedule[]
+  subscriptions       UserSubscription[]
+}
+
+model UserSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  auth      String
+  p256dh    String
+  userId    String?  // Dibuat optional jika ingin mendukung anonim, tapi sebaiknya wajib
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 }
 
 model Location {

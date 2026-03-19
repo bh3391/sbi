@@ -7,11 +7,11 @@ export default async function PendaftaranPublicPage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-cyan-50 to-fuchsia-200">
-      <PendaftaranClient 
-        locations={refs.locations} 
-        packages={refs.packages} 
+      <PendaftaranClient
+        locations={refs.locations}
+        packages={refs.packages}
         subjects={refs.subjects}
-        addOns={refs.addOns} 
+        addOns={refs.addOns}
       />
     </main>
   );

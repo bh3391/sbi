@@ -28,22 +28,26 @@ export async function createSchedule(formData: FormData) {
         day: day,
         sessionId: sessionId,
         OR: [
-          { roomId: roomId },      // Cek apakah ruangan sudah dipakai
-          { teacherId: teacherId } // Cek apakah guru sedang mengajar di kelas lain
-        ]
+          { roomId: roomId }, // Cek apakah ruangan sudah dipakai
+          { teacherId: teacherId }, // Cek apakah guru sedang mengajar di kelas lain
+        ],
       },
       include: {
         room: true,
-        teacher: true
-      }
+        teacher: true,
+      },
     });
 
     if (conflict) {
       if (conflict.roomId === roomId) {
-        return { error: `Ruangan ${conflict.room.name} sudah terisi pada hari ${day} sesi ini!` };
+        return {
+          error: `Ruangan ${conflict.room.name} sudah terisi pada hari ${day} sesi ini!`,
+        };
       }
       if (conflict.teacherId === teacherId) {
-        return { error: `Guru ${conflict.teacher.name} sudah memiliki jadwal mengajar di jam ini!` };
+        return {
+          error: `Guru ${conflict.teacher.name} sudah memiliki jadwal mengajar di jam ini!`,
+        };
       }
     }
 
@@ -61,26 +65,23 @@ export async function createSchedule(formData: FormData) {
       },
       include: {
         subject: true,
-        session: true
-      }
+        session: true,
+      },
     });
 
-    
     revalidatePath("/admin/jadwal/[locationId]", "page");
-    
-    return { success: true, message: "Jadwal berhasil dibuat!" };
 
+    return { success: true, message: "Jadwal berhasil dibuat!" };
   } catch (error) {
     console.error("DATABASE_ERROR:", error);
     return { error: "Terjadi kesalahan sistem saat menyimpan jadwal." };
   }
 }
 
-
 // UPDATE JADWAL
 export async function updateSchedule(scheduleId: string, formData: FormData) {
   const roomId = formData.get("roomId") as string; // Tambahkan roomId jika bisa diubah
-  const day = formData.get("day") as string;       // Tambahkan day jika bisa diubah
+  const day = formData.get("day") as string; // Tambahkan day jika bisa diubah
   const sessionId = formData.get("sessionId") as string;
   const teacherId = formData.get("teacherId") as string;
   const subjectId = formData.get("subjectId") as string;
@@ -94,7 +95,7 @@ export async function updateSchedule(scheduleId: string, formData: FormData) {
   try {
     // 2. AMBIL DATA LAMA (Untuk mendapatkan roomId dan day jika tidak ada di formData)
     const currentSchedule = await prisma.schedule.findUnique({
-      where: { id: scheduleId }
+      where: { id: scheduleId },
     });
 
     if (!currentSchedule) return { error: "Jadwal tidak ditemukan!" };
@@ -108,21 +109,19 @@ export async function updateSchedule(scheduleId: string, formData: FormData) {
         id: { not: scheduleId }, // KUNCI: Jangan cek diri sendiri
         day: targetDay,
         sessionId: sessionId,
-        OR: [
-          { roomId: targetRoomId },
-          { teacherId: teacherId }
-        ]
+        OR: [{ roomId: targetRoomId }, { teacherId: teacherId }],
       },
       include: {
         room: true,
-        teacher: true
-      }
+        teacher: true,
+      },
     });
 
     if (conflict) {
-      const msg = conflict.roomId === targetRoomId 
-        ? `Ruangan ${conflict.room.name} sudah terisi!` 
-        : `Guru ${conflict.teacher.name} sudah mengajar di kelas lain!`;
+      const msg =
+        conflict.roomId === targetRoomId
+          ? `Ruangan ${conflict.room.name} sudah terisi!`
+          : `Guru ${conflict.teacher.name} sudah mengajar di kelas lain!`;
       return { error: msg };
     }
 
@@ -137,14 +136,13 @@ export async function updateSchedule(scheduleId: string, formData: FormData) {
         subjectId,
         students: {
           // 'set' akan menghapus relasi lama dan menggantinya dengan yang baru
-          set: studentIds.map((id) => ({ id })), 
+          set: studentIds.map((id) => ({ id })),
         },
       },
     });
 
     revalidatePath("/admin/jadwal/[locationId]", "page");
     return { success: true, message: "Jadwal berhasil diperbarui!" };
-
   } catch (error) {
     console.error("UPDATE_ERROR:", error);
     return { error: "Gagal memperbarui jadwal karena kesalahan server." };
@@ -163,19 +161,19 @@ export async function deleteSchedule(id: string) {
 }
 
 export async function getCurrentDayName() {
-  return new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(new Date());
+  return new Intl.DateTimeFormat("id-ID", { weekday: "long" }).format(
+    new Date(),
+  );
 }
 
 export async function getTeacherAgenda(teacherId: string) {
   try {
-
     const today = await getCurrentDayName();
     const schedules = await prisma.schedule.findMany({
-      where: { 
+      where: {
         teacherId: teacherId,
-        day: today // Optional: filter berdasarkan hari ini jika perlu
+        day: today, // Optional: filter berdasarkan hari ini jika perlu
         // Optional: filter berdasarkan hari ini jika perlu
-        
       },
       include: {
         session: true,
@@ -188,14 +186,14 @@ export async function getTeacherAgenda(teacherId: string) {
             fullName: true,
             nickname: true,
             imageProfile: true,
-          }
-        }
+          },
+        },
       },
       orderBy: {
         session: {
-          startTime: 'asc'
-        }
-      }
+          startTime: "asc",
+        },
+      },
     });
 
     return { success: true, data: schedules };

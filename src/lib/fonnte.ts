@@ -2,15 +2,18 @@
 export async function sendFonneNotification(target: string, message: string) {
   try {
     const token = process.env.FONNTE_TOKEN;
-    
+
     // Log untuk memastikan variabel terbaca
     console.log("Mengirim WA ke:", target);
-    console.log("Menggunakan Token:", token ? "Token Terdeteksi" : "TOKEN KOSONG!");
+    console.log(
+      "Menggunakan Token:",
+      token ? "Token Terdeteksi" : "TOKEN KOSONG!",
+    );
 
     const response = await fetch("https://api.fonnte.com/send", {
       method: "POST",
       headers: {
-        "Authorization": token || "", // Pastikan tidak undefined
+        Authorization: token || "", // Pastikan tidak undefined
       },
       body: new URLSearchParams({
         target: target,

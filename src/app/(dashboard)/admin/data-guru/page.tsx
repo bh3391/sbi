@@ -6,12 +6,12 @@ import DashboardHeader from "@/components/dashboard/header";
 export default async function DataGuruPage() {
   const [teachers, locations] = await Promise.all([
     getAllTeachers(),
-    getAllLocations()
+    getAllLocations(),
   ]);
 
   return (
     <main className="min-h-screen bg-cyan-50   pb-20">
-        <DashboardHeader title="Database Guru"  />
+      <DashboardHeader userId="" title="Database Guru" />
       <DataGuruClient teachers={teachers} locations={locations} />
     </main>
   );

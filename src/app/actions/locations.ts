@@ -1,7 +1,7 @@
 // src/app/actions/locations.ts
-"use server"
+"use server";
 
-import prisma  from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 
 /**
  * Mengambil semua data lokasi/cabang dari database
@@ -16,7 +16,7 @@ export async function getAllLocations() {
         address: true, // Opsional, jika Anda membutuhkannya
       },
       orderBy: {
-        name: 'asc', // Mengurutkan nama cabang dari A-Z
+        name: "asc", // Mengurutkan nama cabang dari A-Z
       },
     });
 

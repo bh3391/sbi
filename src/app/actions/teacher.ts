@@ -1,6 +1,6 @@
 "use server";
 
-import  prisma  from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { getDistance } from "geolib";
@@ -16,17 +16,17 @@ export async function getTeacherDashboardData() {
     prisma.user.findUnique({ where: { id: teacherId } }),
     prisma.teacherAttendance.findMany({
       where: { teacherId },
-      orderBy: { createdAt: 'desc' },
-      take: 5
+      orderBy: { createdAt: "desc" },
+      take: 5,
     }),
     prisma.attendanceLog.findMany({
-      where: { 
-        teacherId, 
-        processStatus: { in: ['LISTED', 'SCHEDULED'] } 
+      where: {
+        teacherId,
+        processStatus: { in: ["LISTED", "SCHEDULED"] },
       },
       include: { student: true },
-      orderBy: { createdAt: 'desc' }
-    })
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
 
   return { profile, personalAttendance, pendingTasks };
@@ -34,34 +34,43 @@ export async function getTeacherDashboardData() {
 export async function getTeacherAttendanceHistory(teacherId: string) {
   return await prisma.teacherAttendance.findMany({
     where: { teacherId },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
   });
 }
-export async function getAllTeacherAttendanceByDate(teacherId: string, date: Date) {
+export async function getAllTeacherAttendanceByDate(
+  teacherId: string,
+  date: Date,
+) {
   try {
     const logs = await prisma.teacherAttendance.findMany({
-      where: { teacherId, /* ... filter tanggal ... */ },
-      orderBy: { createdAt: 'desc' },
+      where: { teacherId /* ... filter tanggal ... */ },
+      orderBy: { createdAt: "desc" },
     });
 
     // Bungkus dalam objek
-    return { 
-      success: true, 
-      data: logs // logs adalah array yang tadi menyebabkan error
+    return {
+      success: true,
+      data: logs, // logs adalah array yang tadi menyebabkan error
     };
   } catch (error) {
     return { success: false, data: [], message: "Gagal memuat data" };
   }
 }
 
-export async function getTeacherAttendanceByStatus(teacherId: string, status: "LATE" | "ON_TIME" | "LEAVE") {
+export async function getTeacherAttendanceByStatus(
+  teacherId: string,
+  status: "LATE" | "ON_TIME" | "LEAVE",
+) {
   return await prisma.teacherAttendance.findMany({
     where: { teacherId, status },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
   });
 }
 
-export async function handleTeacherCheckIn(scannedQrId: string, userCoords: { lat: number, lng: number }) {
+export async function handleTeacherCheckIn(
+  scannedQrId: string,
+  userCoords: { lat: number; lng: number },
+) {
   const session = await auth();
   if (!session?.user?.id) return { success: false, message: "Unauthorized" };
 
@@ -75,7 +84,10 @@ export async function handleTeacherCheckIn(scannedQrId: string, userCoords: { la
 
     // 2. VALIDASI QR: Cek apakah hasil scan sama dengan qrCodeId unik milik User
     if (user.qrCodeId !== scannedQrId) {
-      return { success: false, message: "QR Code tidak cocok dengan akun Anda!" };
+      return {
+        success: false,
+        message: "QR Code tidak cocok dengan akun Anda!",
+      };
     }
 
     const startOfDay = new Date();
@@ -86,33 +98,37 @@ export async function handleTeacherCheckIn(scannedQrId: string, userCoords: { la
     const existingAttendance = await prisma.teacherAttendance.findFirst({
       where: {
         teacherId: user.id,
-        date: { gte: startOfDay, lte: endOfDay }
-      }
+        date: { gte: startOfDay, lte: endOfDay },
+      },
     });
 
     if (existingAttendance) {
-      return { success: false, message: "Anda sudah melakukan absensi hari ini." };
+      return {
+        success: false,
+        message: "Anda sudah melakukan absensi hari ini.",
+      };
     }
 
     // 3. CARI LOKASI TERDEKAT: Ambil semua lokasi dan cari yang masuk dalam radius
     const allLocations = await prisma.location.findMany();
-    
+
     // Cari lokasi di mana jarak user ke lokasi tersebut <= radius lokasi
     const nearbyLocation = allLocations.find((loc) => {
       if (!loc.latitude || !loc.longitude) return false;
-      
+
       const distance = getDistance(
         { latitude: userCoords.lat, longitude: userCoords.lng },
-        { latitude: loc.latitude, longitude: loc.longitude }
+        { latitude: loc.latitude, longitude: loc.longitude },
       );
-      
+
       return distance <= (loc.radius || 200); // Default 100 meter
     });
 
     if (!nearbyLocation) {
-      return { 
-        success: false, 
-        message: "Anda tidak berada di radius lokasi kantor manapun yang terdaftar." 
+      return {
+        success: false,
+        message:
+          "Anda tidak berada di radius lokasi kantor manapun yang terdaftar.",
       };
     }
 
@@ -123,18 +139,18 @@ export async function handleTeacherCheckIn(scannedQrId: string, userCoords: { la
     let isLate = false;
 
     if (user.isRemote) {
-        isLate = false; 
-      } else if (user.role === "TEACHER") {
-        // Aturan Guru: Batas 13:20
-        if (currentHour > 13 || (currentHour === 13 && currentMinute > 20)) {
-          isLate = true;
-        }
-      } else if (user.role === "ADMIN") {
-        // Aturan Admin Kantor: Batas 11:00
-        if (currentHour >= 11) {
-          isLate = true;
-        }
+      isLate = false;
+    } else if (user.role === "TEACHER") {
+      // Aturan Guru: Batas 13:20
+      if (currentHour > 13 || (currentHour === 13 && currentMinute > 20)) {
+        isLate = true;
       }
+    } else if (user.role === "ADMIN") {
+      // Aturan Admin Kantor: Batas 11:00
+      if (currentHour >= 11) {
+        isLate = true;
+      }
+    }
 
     // 5. SIMPAN KE TeacherAttendance
     await prisma.teacherAttendance.create({
@@ -145,15 +161,14 @@ export async function handleTeacherCheckIn(scannedQrId: string, userCoords: { la
         type: "HADIR",
         date: now,
         checkIn: now,
-      }
+      },
     });
 
     revalidatePath("/guru/absensi");
-    return { 
-      success: true, 
-      message: `Berhasil Absen di ${nearbyLocation.name} (${isLate ? 'Terlambat' : 'Tepat Waktu'})` 
+    return {
+      success: true,
+      message: `Berhasil Absen di ${nearbyLocation.name} (${isLate ? "Terlambat" : "Tepat Waktu"})`,
     };
-
   } catch (e) {
     console.error(e);
     return { success: false, message: "Terjadi kesalahan sistem" };
@@ -163,7 +178,7 @@ export async function handleTeacherCheckIn(scannedQrId: string, userCoords: { la
 // Tambahkan handleTeacherCheckOut yang menerima parameter jika perlu validasi QR saat pulang
 export async function handleTeacherCheckOut() {
   const session = await auth();
-  
+
   // 1. Validasi Sesi
   if (!session?.user?.id) {
     return { success: false, message: "Sesi habis, silakan login kembali." };
@@ -187,14 +202,14 @@ export async function handleTeacherCheckOut() {
         checkOut: null, // Mencari yang masih menggantung
       },
       orderBy: {
-        createdAt: 'desc', // Ambil yang paling terbaru jika ada duplikasi
-      }
+        createdAt: "desc", // Ambil yang paling terbaru jika ada duplikasi
+      },
     });
 
     if (!activeAttendance) {
-      return { 
-        success: false, 
-        message: "Data absen masuk tidak ditemukan atau Anda sudah check-out." 
+      return {
+        success: false,
+        message: "Data absen masuk tidak ditemukan atau Anda sudah check-out.",
       };
     }
 
@@ -203,28 +218,30 @@ export async function handleTeacherCheckOut() {
       where: { id: activeAttendance.id },
       data: {
         checkOut: new Date(),
-      }
+      },
     });
 
     // 4. Refresh Cache UI Guru
     revalidatePath("/guru/absensi");
 
-    return { 
-      success: true, 
-      message: "Berhasil Check-Out. Terima kasih untuk dedikasinya hari ini!" 
+    return {
+      success: true,
+      message: "Berhasil Check-Out. Terima kasih untuk dedikasinya hari ini!",
     };
-
   } catch (error) {
     console.error("Check-Out Error:", error);
-    return { 
-      success: false, 
-      message: "Gagal memproses Check-Out. Silakan coba lagi." 
+    return {
+      success: false,
+      message: "Gagal memproses Check-Out. Silakan coba lagi.",
     };
   }
 }
 
 // 2. Fungsi Izin / Sakit / Cuti
-export async function handleSubmitLeave(type: "IZIN" | "SAKIT" | "CUTI", notes: string) {
+export async function handleSubmitLeave(
+  type: "IZIN" | "SAKIT" | "CUTI",
+  notes: string,
+) {
   const session = await auth();
   if (!session?.user?.id) return { success: false };
 
@@ -238,8 +255,8 @@ export async function handleSubmitLeave(type: "IZIN" | "SAKIT" | "CUTI", notes: 
         location: "Remote",
         // Untuk izin, kita anggap checkIn & checkOut adalah waktu saat melapor
         checkIn: new Date(),
-        checkOut: new Date()
-      }
+        checkOut: new Date(),
+      },
     });
 
     revalidatePath("/guru/absensi");

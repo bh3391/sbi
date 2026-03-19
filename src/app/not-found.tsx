@@ -8,7 +8,7 @@ export default function NotFound() {
     <div className="min-h-screen bg-gradient-to-br from-cyan-100 to-fuchsia-50 flex items-center justify-center p-6">
       <div className="text-center space-y-8 max-w-md">
         {/* Animated Icon */}
-        <motion.div 
+        <motion.div
           initial={{ scale: 0, rotate: -20 }}
           animate={{ scale: 1, rotate: 0 }}
           className="relative inline-block"
@@ -32,13 +32,13 @@ export default function NotFound() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
-          <Link 
+          <Link
             href="/"
             className="w-full sm:w-auto px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-[10pt] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-cyan-600 transition-all shadow-xl shadow-cyan-200/50 active:scale-95"
           >
             <Home size={18} /> Kembali ke Home
           </Link>
-          <button 
+          <button
             onClick={() => window.history.back()}
             className="w-full sm:w-auto px-8 py-4 bg-white/50 backdrop-blur-md text-slate-600 rounded-2xl font-black text-[10pt] uppercase tracking-widest flex items-center justify-center gap-2 border border-white hover:bg-white transition-all active:scale-95"
           >

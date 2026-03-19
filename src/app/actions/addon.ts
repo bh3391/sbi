@@ -1,6 +1,6 @@
 "use server";
 
-import prisma  from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
 // 1. CREATE ADDON
@@ -67,6 +67,9 @@ export async function deleteAddon(id: string) {
     return { success: true, message: "Add-on berhasil dihapus!" };
   } catch (error) {
     console.error("Error deleting addon:", error);
-    return { success: false, message: "Gagal menghapus Add-on. Mungkin data sudah digunakan." };
+    return {
+      success: false,
+      message: "Gagal menghapus Add-on. Mungkin data sudah digunakan.",
+    };
   }
 }

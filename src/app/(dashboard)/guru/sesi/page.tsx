@@ -10,14 +10,14 @@ export default async function TeacherAgendaPage() {
   // 1. Ambil data guru yang sedang login
   const currentUser = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, role: true, nickname: true }
+    select: { id: true, role: true, nickname: true },
   });
 
   // 2. Ambil semua daftar guru (untuk dropdown Admin)
   const allTeachers = await prisma.user.findMany({
     where: { role: "TEACHER" },
     select: { id: true, nickname: true, name: true },
-    orderBy: { nickname: 'asc' }
+    orderBy: { nickname: "asc" },
   });
 
   const today = await getCurrentDayName();
@@ -27,7 +27,8 @@ export default async function TeacherAgendaPage() {
   const initialSchedules = await prisma.schedule.findMany({
     where: {
       // Gunakan ID pertama jika admin belum memilih guru
-      teacherId: currentUser?.role === "TEACHER" ? currentUser.id : allTeachers[0]?.id,
+      teacherId:
+        currentUser?.role === "TEACHER" ? currentUser.id : allTeachers[0]?.id,
       day: today,
     },
     include: {
@@ -41,10 +42,20 @@ export default async function TeacherAgendaPage() {
           nickname: true,
           fullName: true,
           imageProfile: true,
-        }
+        },
       },
     },
-    orderBy: { session: { startTime: 'asc' } }
+    orderBy: { session: { startTime: "asc" } },
+  });
+
+  const addons = await prisma.addon.findMany({
+    where: {
+      isActive: true, // Hanya ambil program yang aktif
+    },
+    select: {
+      id: true,
+      name: true,
+    },
   });
 
   // Tambahkan pengecekan sederhana untuk menghindari error jika user tidak ditemukan
@@ -54,10 +65,11 @@ export default async function TeacherAgendaPage() {
 
   return (
     <div className="min-h-screen bg-cyan-50 pb-20">
-      <TeacherAgendaClient 
+      <TeacherAgendaClient
         initialSchedules={initialSchedules}
         allTeachers={allTeachers}
         currentUser={currentUser}
+        dataAddons={addons}
         today={today}
       />
     </div>

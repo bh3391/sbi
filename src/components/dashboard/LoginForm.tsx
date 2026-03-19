@@ -1,7 +1,15 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { Mail, Lock, ArrowRight, Info, Loader2, Eye, EyeOff } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  ArrowRight,
+  Info,
+  Loader2,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { authenticate } from "@/lib/action";
 import Image from "next/image";
 
@@ -40,10 +48,10 @@ export default function LoginForm() {
           <div className="mx-auto h-16 w-16 bg-white rounded-2xl flex items-center justify-center mb-3 shadow-xl shadow-cyan-100 border border-white overflow-hidden">
             <Image
               width={64}
-              height={64} 
-              src="/logo-header.png" 
-              alt="Logo Bimbel Pro" 
-              className="w-16 h-16 object-contain" 
+              height={64}
+              src="/logo-header.png"
+              alt="Logo Bimbel Pro"
+              className="w-16 h-16 object-contain"
             />
           </div>
           <h2 className="text-xl font-bold text-slate-800 tracking-tighter uppercase">
@@ -69,7 +77,10 @@ export default function LoginForm() {
                 Email Address
               </label>
               <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-cyan-500 transition-colors" size={18} />
+                <Mail
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-cyan-500 transition-colors"
+                  size={18}
+                />
                 <input
                   name="email"
                   type="email"
@@ -85,7 +96,10 @@ export default function LoginForm() {
                 Password
               </label>
               <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-fuchsia-500 transition-colors" size={18} />
+                <Lock
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-fuchsia-500 transition-colors"
+                  size={18}
+                />
                 <input
                   name="password"
                   type={showPassword ? "text" : "password"}
@@ -104,7 +118,10 @@ export default function LoginForm() {
             </div>
 
             <div className="flex justify-end pr-1">
-              <a href="#" className="text-[9px] font-black text-fuchsia-500 hover:text-cyan-600 transition-colors uppercase tracking-widest">
+              <a
+                href="#"
+                className="text-[9px] font-black text-fuchsia-500 hover:text-cyan-600 transition-colors uppercase tracking-widest"
+              >
                 Lupa Password?
               </a>
             </div>
@@ -113,9 +130,10 @@ export default function LoginForm() {
               type="submit"
               disabled={isPending}
               className={`w-full h-14 rounded-2xl font-black shadow-lg transition-all active:scale-[0.97] flex items-center justify-center gap-3 uppercase tracking-[0.2em] text-[11px] relative overflow-hidden
-                ${isPending 
-                  ? "bg-slate-100 text-slate-400 shadow-none cursor-not-allowed" 
-                  : "bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white shadow-fuchsia-200 shadow-lg"
+                ${
+                  isPending
+                    ? "bg-slate-100 text-slate-400 shadow-none cursor-not-allowed"
+                    : "bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white shadow-fuchsia-200 shadow-lg"
                 }`}
             >
               <span className="relative z-10 flex items-center gap-2">

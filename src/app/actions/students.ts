@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { sendFonneNotification } from "@/lib/fonnte";
 import { auth } from "@/lib/auth";
 import { StudentStatus } from "@prisma/client";
+import { sendPushNotification } from "./push-notif";
 
 export async function getAllStudents() {
   try {
@@ -12,22 +13,22 @@ export async function getAllStudents() {
         location: {
           select: {
             name: true, // Mengambil nama lokasi/cabang
-          }
+          },
         },
         _count: {
-          select: { attendances: true }
-        }
+          select: { attendances: true },
+        },
       },
       orderBy: {
-        fullName: 'asc',
+        fullName: "asc",
       },
     });
 
     // Kita transform data agar lebih mudah dibaca oleh komponen UI
-    return students.map(s => ({
+    return students.map((s) => ({
       ...s,
       locationName: s.location?.name || "No Location",
-      totalAttendances: s._count.attendances
+      totalAttendances: s._count.attendances,
     }));
   } catch (error) {
     console.error("Error fetching students:", error);
@@ -38,7 +39,7 @@ export async function getAllStudents() {
 export async function createStudent(formData: any, addonIds: string[] = []) {
   const session = await auth();
   const currentUserId = session?.user?.id;
-  const REG_FEE = 150000; 
+  const REG_FEE = 150000;
 
   try {
     const fullName = formData.get("fullName") as string;
@@ -63,11 +64,17 @@ export async function createStudent(formData: any, addonIds: string[] = []) {
     if (!pkg) throw new Error("Paket tidak ditemukan");
 
     const selectedAddons = await prisma.addon.findMany({
-      where: { id: { in: addonIds } }
+      where: { id: { in: addonIds } },
     });
 
-    const addonsTotalPrice = selectedAddons.reduce((sum, a) => sum + Number(a.price || 0), 0);
-    const addonsTotalSesi = selectedAddons.reduce((sum, a) => sum + Number(a.sesiCredit || 0), 0);
+    const addonsTotalPrice = selectedAddons.reduce(
+      (sum, a) => sum + Number(a.price || 0),
+      0,
+    );
+    const addonsTotalSesi = selectedAddons.reduce(
+      (sum, a) => sum + Number(a.sesiCredit || 0),
+      0,
+    );
 
     const totalInitialAmount = Number(pkg.price) + REG_FEE + addonsTotalPrice;
 
@@ -108,37 +115,47 @@ export async function createStudent(formData: any, addonIds: string[] = []) {
           category: "REGISTRATION",
           method: method,
           notes: `REGIST: ${pkg.name.toUpperCase()}${
-            selectedAddons.length > 0 
-              ? ' + ADDONS: ' + selectedAddons.map(a => a.name).join(', ') 
-              : ''
+            selectedAddons.length > 0
+              ? " + ADDONS: " + selectedAddons.map((a) => a.name).join(", ")
+              : ""
           }`,
           createdById: currentUserId || null,
-        }
+        },
       });
 
-      return { student, totalAmount: totalInitialAmount, addonsList: selectedAddons };
+      return {
+        student,
+        totalAmount: totalInitialAmount,
+        addonsList: selectedAddons,
+      };
     });
 
     // --- NOTIFIKASI WHATSAPP ---
     if (transactionResult) {
       const { student, totalAmount, addonsList } = transactionResult;
-      
+
       // Susun rincian Add-on untuk teks WA
-      const addonText = addonsList.length > 0 
-        ? addonsList.map(a => `• Add-on ${a.name} : Rp ${a.price.toLocaleString('id-ID')}\n`).join('')
-        : "";
+      const addonText =
+        addonsList.length > 0
+          ? addonsList
+              .map(
+                (a) =>
+                  `• Add-on ${a.name} : Rp ${a.price.toLocaleString("id-ID")}\n`,
+              )
+              .join("")
+          : "";
 
       if (student.parentContact) {
-        const parentMsg = 
+        const parentMsg =
           `Halo Ayah/Bunda *${student.parentName}*,\n\n` +
           `Pendaftaran Ananda *${student.fullName}* berhasil kami catat. ✨\n\n` +
           `*DETAIL PEMBAYARAN:*\n` +
           `--------------------------------\n` +
-          `• Biaya Registrasi : Rp ${REG_FEE.toLocaleString('id-ID')}\n` +
-          `• Paket ${pkg.name} : Rp ${pkg.price.toLocaleString('id-ID')}\n` +
+          `• Biaya Registrasi : Rp ${REG_FEE.toLocaleString("id-ID")}\n` +
+          `• Paket ${pkg.name} : Rp ${pkg.price.toLocaleString("id-ID")}\n` +
           `${addonText}` +
           `--------------------------------\n` +
-          `*TOTAL TRANSFER : Rp ${totalAmount.toLocaleString('id-ID')}*\n` +
+          `*TOTAL TRANSFER : Rp ${totalAmount.toLocaleString("id-ID")}*\n` +
           `--------------------------------\n\n` +
           `*TRANSFER KE REKENING:*\n` +
           `🏦 *BCA - 1234567890*\n` +
@@ -146,12 +163,17 @@ export async function createStudent(formData: any, addonIds: string[] = []) {
           `Mohon kirimkan *Bukti Transfer* untuk aktivasi akun Ananda. Terima kasih! 🙏`;
 
         await sendFonneNotification(student.parentContact, parentMsg);
+
+        await sendPushNotification({
+          title: "📢 Pendaftaran Baru telah diterima!",
+          body: `Siswa baru: ${student.fullName} (${pkg.name || "Add-on"}) Mohon segera check dan konfirmasi pendaftaran, Terima Kasih`,
+          url: "/admin/data-siswa",
+        });
       }
     }
 
     revalidatePath("/admin/data-siswa");
     return { success: true };
-
   } catch (error) {
     console.error("Registration Error:", error);
     return { success: false, message: "Gagal mendaftarkan siswa" };
@@ -160,54 +182,53 @@ export async function createStudent(formData: any, addonIds: string[] = []) {
 
 export async function getFormDataReferences() {
   try {
-    const [locations, packages, subjects,addOns] = await Promise.all([
+    const [locations, packages, subjects, addOns] = await Promise.all([
       // Mengambil lokasi belajar
-      prisma.location.findMany({ 
+      prisma.location.findMany({
         select: { id: true, name: true },
-        orderBy: { name: 'asc' }
+        orderBy: { name: "asc" },
       }),
       // Mengambil paket (Penting: Sertakan price dan sesiCredit untuk kalkulasi Payment)
-      prisma.package.findMany({ 
-        select: { 
-          id: true, 
-          name: true, 
+      prisma.package.findMany({
+        select: {
+          id: true,
+          name: true,
           sesiCredit: true,
-          price: true // Dibutuhkan untuk mengisi amount di tabel Payment
+          price: true, // Dibutuhkan untuk mengisi amount di tabel Payment
         },
-        orderBy: { sesiCredit: 'asc' }
+        orderBy: { sesiCredit: "asc" },
       }),
       // Mengambil mata pelajaran
-      prisma.subject.findMany({ 
+      prisma.subject.findMany({
         select: { id: true, name: true },
-        orderBy: { name: 'asc' }
+        orderBy: { name: "asc" },
       }),
       prisma.addon.findMany({
-        select: { id: true, name: true, price: true, },
-        orderBy: { name: 'asc' }
-      })
+        select: { id: true, name: true, price: true },
+        orderBy: { name: "asc" },
+      }),
     ]);
 
-    return { 
-      locations, 
-      packages, 
+    return {
+      locations,
+      packages,
       subjects,
       addOns,
-      success: true 
+      success: true,
     };
   } catch (error) {
     console.error("Error fetching form references:", error);
-    return { 
-      locations: [], 
-      packages: [], 
+    return {
+      locations: [],
+      packages: [],
       subjects: [],
-      addOns:[], 
-      success: false 
+      addOns: [],
+      success: false,
     };
   }
 }
 
 export async function updateStudent(id: string, formData: any) {
-
   const subjectIdsRaw = formData.get("subjectIds") as string;
   const subjectIds = subjectIdsRaw ? JSON.parse(subjectIdsRaw) : [];
 
@@ -222,8 +243,8 @@ export async function updateStudent(id: string, formData: any) {
         locationId: formData.locationId,
         packageId: formData.packageId,
         subjects: {
-            connect: subjectIds.map((id: string) => ({ id })),
-          },
+          connect: subjectIds.map((id: string) => ({ id })),
+        },
         status: formData.status, // Penting untuk bisa ubah status ke SUSPEND/ACTIVE
         remainingSesi: formData.remainingSesi, // Memungkinkan admin koreksi sesi
       },
@@ -237,7 +258,10 @@ export async function updateStudent(id: string, formData: any) {
   }
 }
 
-export async function updateStudentStatus(studentId: string, newStatus: string) {
+export async function updateStudentStatus(
+  studentId: string,
+  newStatus: string,
+) {
   try {
     await prisma.student.update({
       where: { id: studentId },
@@ -264,13 +288,15 @@ export async function registerStudentPublic(formData: FormData) {
     const locationId = formData.get("locationId") as string;
     const packageId = formData.get("packageId") as string;
     const addOnId = formData.get("addOnId") as string; // Sesuai nama di dropdown add-on nullable
-    
+
     // Ambil array JSON dari hidden input
     const subjectIdsRaw = formData.get("subjectIds") as string;
     const subjectIds = subjectIdsRaw ? JSON.parse(subjectIdsRaw) : [];
 
     if (!packageId && !addOnId) {
-      throw new Error("Silakan pilih minimal satu: Paket Belajar atau Program Add-on.");
+      throw new Error(
+        "Silakan pilih minimal satu: Paket Belajar atau Program Add-on.",
+      );
     }
 
     let pkgPrice = 0;
@@ -289,8 +315,6 @@ export async function registerStudentPublic(formData: FormData) {
     let addonsTotalPrice = 0;
     let selectedAddonList: any[] = [];
     let addonsTotalSesi = 0;
-
-      
 
     if (addOnId) {
       const addon = await prisma.addon.findUnique({ where: { id: addOnId } });
@@ -344,72 +368,68 @@ export async function registerStudentPublic(formData: FormData) {
           category: "REGISTRATION",
           method: "TRANSFER", // Default publik adalah transfer
           notes: `PENDAFTARAN PUBLIK: ${pkgName.toUpperCase()}${
-            selectedAddonList.length > 0 ? " + " + selectedAddonList[0].name : ""
+            selectedAddonList.length > 0
+              ? " + " + selectedAddonList[0].name
+              : ""
           }`,
           createdById: null, // Publik tidak memiliki User ID Admin
         },
       });
 
-      return { student, totalAmount: totalInitialAmount, addonsList: selectedAddonList };
+      return {
+        student,
+        totalAmount: totalInitialAmount,
+        addonsList: selectedAddonList,
+      };
     });
 
     // 5. Kirim Notifikasi WhatsApp
     if (transactionResult) {
-  const { student, totalAmount, addonsList } = transactionResult;
-  const adminContact = "089670431969"; // Nomor Owner/Admin
+      const { student, totalAmount, addonsList } = transactionResult;
+      const adminContact = "089670431969"; // Nomor Owner/Admin
 
-  // Rincian Add-on (Reusable)
-  const addonText = addonsList.length > 0
-    ? `• Add-on ${addonsList[0].name} : Rp ${addonsList[0].price.toLocaleString("id-ID")}\n`
-    : "";
+      // Rincian Add-on (Reusable)
+      const addonText =
+        addonsList.length > 0
+          ? `• Add-on ${addonsList[0].name} : Rp ${addonsList[0].price.toLocaleString("id-ID")}\n`
+          : "";
 
-  // 1. PESAN UNTUK ORANG TUA
-  if (student.parentContact) {
-    const parentMsg =
-      `Halo Ayah/Bunda *${parentName}*,\n\n` +
-      `Pendaftaran Ananda *${fullName}* berhasil kami catat. ✨\n\n` +
-      `*DETAIL PEMBAYARAN:*\n` +
-      `--------------------------------\n` +
-      `• Biaya Registrasi : Rp ${REG_FEE.toLocaleString("id-ID")}\n` +
-      `• Paket ${pkgName} : Rp ${pkgPrice.toLocaleString("id-ID")}\n` +
-      `${addonText}` +
-      `--------------------------------\n` +
-      `*TOTAL TRANSFER : Rp ${totalAmount.toLocaleString("id-ID")}*\n` +
-      `--------------------------------\n\n` +
-      `*TRANSFER KE REKENING:*\n` +
-      `🏦 *BCA - 1234567890*\n` +
-      `👤 *A/N ADMIN BIMBEL*\n\n` +
-      `Mohon kirimkan *Bukti Transfer* ke nomor ini untuk aktivasi akun Ananda. Terima kasih! 🙏`;
+      // 1. PESAN UNTUK ORANG TUA
+      if (student.parentContact) {
+        const parentMsg =
+          `Halo Ayah/Bunda *${parentName}*,\n\n` +
+          `Pendaftaran Ananda *${fullName}* berhasil kami catat. ✨\n\n` +
+          `*DETAIL PEMBAYARAN:*\n` +
+          `--------------------------------\n` +
+          `• Biaya Registrasi : Rp ${REG_FEE.toLocaleString("id-ID")}\n` +
+          `• Paket ${pkgName} : Rp ${pkgPrice.toLocaleString("id-ID")}\n` +
+          `${addonText}` +
+          `--------------------------------\n` +
+          `*TOTAL TRANSFER : Rp ${totalAmount.toLocaleString("id-ID")}*\n` +
+          `--------------------------------\n\n` +
+          `*TRANSFER KE REKENING:*\n` +
+          `🏦 *BCA - 1234567890*\n` +
+          `👤 *A/N ADMIN BIMBEL*\n\n` +
+          `Mohon kirimkan *Bukti Transfer* ke nomor ini untuk aktivasi akun Ananda. Terima kasih! 🙏`;
 
-    await sendFonneNotification(student.parentContact, parentMsg);
-  }
+        await sendFonneNotification(student.parentContact, parentMsg);
+      }
 
-  // 2. PESAN UNTUK ADMIN/OWNER
-  const adminMsg = 
-    `📢 *NOTIFIKASI PENDAFTARAN BARU*\n\n` +
-    `Seorang siswa telah mendaftar melalui form publik:\n\n` +
-    `*DATA SISWA:*\n` +
-    `• Nama: ${fullName} (${nickname})\n` +
-    `• Orang Tua: ${parentName}\n` +
-    `• WhatsApp: ${student.parentContact}\n` +
-    `• Lokasi: ${student.locationId}\n\n` + // Anda bisa mengambil loc.name jika sudah di-query
-    `*PAKET DI AMBIL:*\n` +
-    `• Paket: ${pkgName}\n` +
-    `${addonText}` +
-    `• Total Tagihan: *Rp ${totalAmount.toLocaleString("id-ID")}*\n\n` +
-    `_Segera cek dashboard admin untuk verifikasi pembayaran jika bukti transfer sudah dikirim._`;
-
-  await sendFonneNotification(adminContact, adminMsg);
-}
+      // 2. PESAN UNTUK ADMIN/OWNER
+      await sendPushNotification({
+        title: "📢 Pendaftaran Siswa Baru telah diterima!",
+        body: `Siswa baru: ${student.fullName} (${pkgName || "Add-on"}) Mohon segera check dan konfirmasi pendaftaran, Terima Kasih`,
+        url: "/admin/data-siswa",
+      });
+    }
 
     revalidatePath("/admin/data-siswa"); // Agar admin melihat data baru
     return { success: true };
-
   } catch (error: any) {
     console.error("Public Registration Error:", error);
-    return { 
-      success: false, 
-      message: error.message || "Gagal mendaftarkan siswa secara publik" 
+    return {
+      success: false,
+      message: error.message || "Gagal mendaftarkan siswa secara publik",
     };
   }
 }

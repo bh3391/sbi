@@ -11,7 +11,10 @@ interface AddInventoryFABProps {
   currentUserId: string;
 }
 
-export default function AddInventoryFAB({ locationId, currentUserId }: AddInventoryFABProps) {
+export default function AddInventoryFAB({
+  locationId,
+  currentUserId,
+}: AddInventoryFABProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -46,8 +49,13 @@ export default function AddInventoryFAB({ locationId, currentUserId }: AddInvent
               {/* Header */}
               <div className="bg-fuchsia-500 p-6 text-white">
                 <div className="flex justify-between items-center">
-                  <h2 className="text-lg font-bold uppercase tracking-tight">Barang Baru</h2>
-                  <button onClick={() => setIsOpen(false)} className="bg-white/10 p-1 rounded-full">
+                  <h2 className="text-lg font-bold uppercase tracking-tight">
+                    Barang Baru
+                  </h2>
+                  <button
+                    onClick={() => setIsOpen(false)}
+                    className="bg-white/10 p-1 rounded-full"
+                  >
                     <X size={18} />
                   </button>
                 </div>

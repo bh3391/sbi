@@ -18,7 +18,8 @@ export const authConfig = {
       const { pathname } = nextUrl;
 
       // Proteksi rute utama (hanya cek login)
-      const isDashboardRoute = pathname.startsWith("/admin") || pathname.startsWith("/guru");
+      const isDashboardRoute =
+        pathname.startsWith("/admin") || pathname.startsWith("/guru");
 
       if (isDashboardRoute) {
         if (isLoggedIn) return true; // Biarkan masuk, validasi role dilakukan di Layout.tsx
@@ -28,7 +29,9 @@ export const authConfig = {
       // Jika sudah login dan mencoba akses login page lagi
       if (isLoggedIn && pathname === "/entrance-guru") {
         const role = (auth.user as any)?.role;
-        return Response.redirect(new URL(role === "ADMIN" ? "/admin" : "/guru", nextUrl));
+        return Response.redirect(
+          new URL(role === "ADMIN" ? "/admin" : "/guru", nextUrl),
+        );
       }
 
       return true;

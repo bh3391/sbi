@@ -27,9 +27,15 @@ export async function createLocation(formData: FormData) {
   const name = formData.get("name") as string;
   const address = formData.get("address") as string;
   // Tambahan field sesuai schema
-  const lat = formData.get("latitude") ? parseFloat(formData.get("latitude") as string) : null;
-  const lng = formData.get("longitude") ? parseFloat(formData.get("longitude") as string) : null;
-  const radius = formData.get("radius") ? parseInt(formData.get("radius") as string) : 1000;
+  const lat = formData.get("latitude")
+    ? parseFloat(formData.get("latitude") as string)
+    : null;
+  const lng = formData.get("longitude")
+    ? parseFloat(formData.get("longitude") as string)
+    : null;
+  const radius = formData.get("radius")
+    ? parseInt(formData.get("radius") as string)
+    : 1000;
 
   if (!name) return { error: "Nama lokasi wajib diisi" };
 
@@ -104,8 +110,10 @@ export async function deleteLocation(id: string) {
     return { success: true };
   } catch (error: any) {
     // Cek jika error karena masih ada relasi (P2003 adalah kode error Prisma untuk constraint)
-    if (error.code === 'P2003') {
-      return { error: "Gagal hapus: Cabang ini masih memiliki ruangan atau siswa." };
+    if (error.code === "P2003") {
+      return {
+        error: "Gagal hapus: Cabang ini masih memiliki ruangan atau siswa.",
+      };
     }
     return { error: "Gagal menghapus lokasi" };
   }
@@ -122,8 +130,10 @@ export async function deleteRoom(id: string) {
     revalidatePath("/admin/manager");
     return { success: true };
   } catch (error: any) {
-    if (error.code === 'P2003') {
-      return { error: "Gagal hapus: Ruangan ini masih digunakan dalam jadwal." };
+    if (error.code === "P2003") {
+      return {
+        error: "Gagal hapus: Ruangan ini masih digunakan dalam jadwal.",
+      };
     }
     return { error: "Gagal menghapus ruangan" };
   }
@@ -140,7 +150,7 @@ export async function deleteStudentSession(id: string) {
     revalidatePath("/admin/manager");
     return { success: true };
   } catch (error: any) {
-    if (error.code === 'P2003') {
+    if (error.code === "P2003") {
       return { error: "Gagal hapus: Sesi ini masih digunakan dalam jadwal." };
     }
     return { error: "Gagal menghapus sesi" };

@@ -10,7 +10,8 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
-  
+  const userId = session?.user?.id || "";
+
   // 1. Cek apakah sudah login
   if (!session) {
     redirect("/entrance-guru");
@@ -23,7 +24,7 @@ export default async function DashboardLayout({
 
   if (!isAllowed) {
     console.log(`Access Denied for role: ${role}`);
-    redirect("/"); 
+    redirect("/");
   }
 
   return (
@@ -31,12 +32,11 @@ export default async function DashboardLayout({
       {/* Konten Utama */}
       {/* pb-24 memastikan konten tidak tertutup oleh BottomNav yang melayang */}
       <main className="pb-24 max-w-md mx-auto min-h-screen relative pt-0 px-0">
-        
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
           <Toaster position="top-center" richColors />
-          
+
           {children}
-          
+
           {/* Kirim role ke BottomNav sebagai props (Client Component) */}
           <BottomNav role={role} />
         </div>

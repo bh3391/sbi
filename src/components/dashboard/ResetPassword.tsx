@@ -12,7 +12,12 @@ interface ResetPasswordProps {
   onClose: () => void; // Pastikan ini ada di interface
 }
 
-export default function ResetPasswordModal({ userId, userName, onSuccess, onClose }: ResetPasswordProps) {
+export default function ResetPasswordModal({
+  userId,
+  userName,
+  onSuccess,
+  onClose,
+}: ResetPasswordProps) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -20,47 +25,51 @@ export default function ResetPasswordModal({ userId, userName, onSuccess, onClos
   const [error, setError] = useState("");
 
   const handleReset = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setError(""); // Tetap gunakan setError untuk validasi input inline jika perlu
+    e.preventDefault();
+    setError(""); // Tetap gunakan setError untuk validasi input inline jika perlu
 
-  // 1. Validasi Input
-  if (password.length < 6) {
-    toast.error("Password Terlalu Pendek", { description: "Minimal harus 6 karakter." });
-    return setError("Minimal 6 karakter");
-  }
-  if (password !== confirmPassword) {
-    toast.error("Password Tidak Cocok", { description: "Pastikan konfirmasi password sama." });
-    return setError("Password tidak cocok");
-  }
+    // 1. Validasi Input
+    if (password.length < 6) {
+      toast.error("Password Terlalu Pendek", {
+        description: "Minimal harus 6 karakter.",
+      });
+      return setError("Minimal 6 karakter");
+    }
+    if (password !== confirmPassword) {
+      toast.error("Password Tidak Cocok", {
+        description: "Pastikan konfirmasi password sama.",
+      });
+      return setError("Password tidak cocok");
+    }
 
-  // 2. Gunakan toast.promise untuk eksekusi
-  // Kita hilangkan window.confirm karena tombol 'Reset' di UI sudah merupakan aksi sadar
-  setIsLoading(true);
+    // 2. Gunakan toast.promise untuk eksekusi
+    // Kita hilangkan window.confirm karena tombol 'Reset' di UI sudah merupakan aksi sadar
+    setIsLoading(true);
 
-  toast.promise(updateUserPassword(userId, password), {
-    loading: `Sedang mereset password ${userName}...`,
-    success: (res: any) => {
-      if (res.success) {
-        onSuccess?.();
-        return `Password ${userName} berhasil diperbarui!`;
-      } else {
-        throw new Error(res.message || "Gagal memperbarui database");
-      }
-    },
-    error: (err) => {
-      setError(err.message);
-      return err.message || "Terjadi kesalahan sistem";
-    },
-    finally: () => {
-      setIsLoading(false);
-    },
-  });
-};
+    toast.promise(updateUserPassword(userId, password), {
+      loading: `Sedang mereset password ${userName}...`,
+      success: (res: any) => {
+        if (res.success) {
+          onSuccess?.();
+          return `Password ${userName} berhasil diperbarui!`;
+        } else {
+          throw new Error(res.message || "Gagal memperbarui database");
+        }
+      },
+      error: (err) => {
+        setError(err.message);
+        return err.message || "Terjadi kesalahan sistem";
+      },
+      finally: () => {
+        setIsLoading(false);
+      },
+    });
+  };
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
       {/* Backdrop - Klik di sini untuk menutup */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -69,39 +78,41 @@ export default function ResetPasswordModal({ userId, userName, onSuccess, onClos
       />
 
       {/* Modal Content */}
-      <motion.div 
+      <motion.div
         initial={{ scale: 0.9, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.9, opacity: 0, y: 20 }}
         // e.stopPropagation mencegah klik di dalam modal "tembus" ke backdrop
-        onClick={(e) => e.stopPropagation()} 
+        onClick={(e) => e.stopPropagation()}
         className="relative w-full max-w-sm bg-white rounded-[32px] overflow-hidden shadow-2xl z-10 pointer-events-auto"
       >
         {/* Decorative Top Bar */}
         <div className="h-2 bg-gradient-to-r from-amber-400 via-rose-500 to-fuchsia-600" />
-        
+
         <div className="p-8 space-y-6">
           <div className="flex justify-between items-start">
             <div className="p-3 bg-amber-50 text-amber-500 rounded-2xl shadow-sm">
               <ShieldAlert size={24} />
             </div>
-            <button 
-      type="button"
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation(); // Mencegah event merambat ke element di bawahnya
-    onClose();
-      }}
-      className="p-2 hover:bg-slate-100 active:bg-slate-200 rounded-full text-slate-400 transition-all"
-    >
-      <X size={20} />
-    </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation(); // Mencegah event merambat ke element di bawahnya
+                onClose();
+              }}
+              className="p-2 hover:bg-slate-100 active:bg-slate-200 rounded-full text-slate-400 transition-all"
+            >
+              <X size={20} />
+            </button>
           </div>
 
           <div className="space-y-1">
-            <h3 className="text-xl font-black text-slate-800 tracking-tight">Reset Password</h3>
+            <h3 className="text-xl font-black text-slate-800 tracking-tight">
+              Reset Password
+            </h3>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
-              Mengubah akses masuk untuk <br/>
+              Mengubah akses masuk untuk <br />
               <span className="text-fuchsia-600 font-black">{userName}</span>
             </p>
           </div>
@@ -109,7 +120,9 @@ export default function ResetPasswordModal({ userId, userName, onSuccess, onClos
           <form onSubmit={handleReset} className="space-y-4">
             {/* Password Baru */}
             <div className="space-y-1">
-              <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Password Baru</label>
+              <label className="text-[9px] font-black text-slate-400 uppercase ml-1">
+                Password Baru
+              </label>
               <div className="relative">
                 <input
                   type={showPass ? "text" : "password"}
@@ -132,7 +145,9 @@ export default function ResetPasswordModal({ userId, userName, onSuccess, onClos
 
             {/* Konfirmasi Password */}
             <div className="space-y-1">
-              <label className="text-[9px] font-black text-slate-400 uppercase ml-1">Konfirmasi Password</label>
+              <label className="text-[9px] font-black text-slate-400 uppercase ml-1">
+                Konfirmasi Password
+              </label>
               <input
                 type={showPass ? "text" : "password"}
                 value={confirmPassword}
@@ -146,7 +161,7 @@ export default function ResetPasswordModal({ userId, userName, onSuccess, onClos
 
             {/* Error Message */}
             {error && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 className="bg-rose-50 p-3 rounded-xl border border-rose-100"
@@ -166,7 +181,9 @@ export default function ResetPasswordModal({ userId, userName, onSuccess, onClos
               {isLoading ? (
                 <Loader2 size={16} className="animate-spin" />
               ) : (
-                <>Update Password <Lock size={14} /></>
+                <>
+                  Update Password <Lock size={14} />
+                </>
               )}
             </button>
           </form>
