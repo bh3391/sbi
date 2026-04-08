@@ -69,6 +69,10 @@ model Student {
   parentContact String?
   parentName    String? // Kolom Baru
   address       String?
+  deposit        Int     @default(0)
+
+  parentId      String?
+  parent        Parent? @relation(fields: [parentId], references: [id])
 
   imageProfile  String?
   status        StudentStatus   @default(NEWSTUDENT)
@@ -84,6 +88,15 @@ model Student {
   payment       Payment[]     @relation("StudentPayments")
   schedules     Schedule[]
   addons         Addon[]         @relation("StudentAddons")
+  invoices       Invoice[]
+}
+
+model Parent {
+  id             String    @id @default(cuid())
+  contact        String    @unique // Kunci utama untuk sinkronisasi
+  name           String
+  depositBalance Int       @default(0)
+  students       Student[]
 }
 
 model Addon {
@@ -226,6 +239,9 @@ model Payment {
   
   students   Student[] @relation("StudentPayments")
 
+  invoiceId String?   // Field ID ini harus ada
+  invoice   Invoice?  @relation(fields: [invoiceId], references: [id])
+
   // Detail Pembayaran
   amount Float // Nilai tagihan
   date   DateTime @default(now())
@@ -298,6 +314,36 @@ model InventoryLog {
   createdBy   User   @relation(fields: [createdById], references: [id])
 
   createdAt DateTime @default(now())
+}
+
+model Invoice {
+  id           String    @id @default(cuid())
+  invoiceNo    String    @unique // Contoh: INV-202604-001
+  studentId    String
+  student      Student   @relation(fields: [studentId], references: [id])
+  
+  month        Int       // Bulan tagihan (1-12)
+  year         Int       // Tahun tagihan
+  
+  amount       Int       // Nominal asli paket (misal: 500.000)
+  discount     Int       @default(0) // Potongan dari deposit bulan lalu
+  totalToPay   Int       // amount - discount
+  
+  status       InvoiceStatus @default(UNPAID)
+  dueDate      DateTime?
+  paidAt        DateTime? 
+  paymentMethod String?   
+  
+  payments     Payment[] // Relasi: satu invoice bisa dibayar dengan beberapa transaksi
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+enum InvoiceStatus {
+  UNPAID
+  PARTIAL
+  PAID
+  VOID
 }
 
 enum Role {

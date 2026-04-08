@@ -291,3 +291,163 @@ export async function createManualPayment(formData: FormData) {
     return { success: false, message: "Gagal menyimpan data ke database" };
   }
 }
+
+export async function handleConfirmWithInvoice(paymentId: string) {
+  try {
+    const session = await auth();
+    const currentUserId = session?.user?.id;
+
+    if (!currentUserId) {
+      throw new Error(
+        "Unauthorized: Anda harus login untuk melakukan verifikasi.",
+      );
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Ambil data pembayaran beserta Invoice, Siswa, Paket, dan Addons
+      const pay = await tx.payment.findUnique({
+        where: { id: paymentId },
+        include: {
+          invoice: true, // Hubungkan dengan invoice
+          students: {
+            include: {
+              package: true,
+              addons: true,
+            },
+          },
+        },
+      });
+
+      if (!pay) throw new Error("Data pembayaran tidak ditemukan.");
+      if (pay.status === "SUCCESS")
+        throw new Error("Pembayaran ini sudah diverifikasi.");
+
+      // A. UPDATE STATUS PEMBAYARAN
+      await tx.payment.update({
+        where: { id: paymentId },
+        data: {
+          status: "SUCCESS",
+          verifiedAt: new Date(),
+          verifiedById: currentUserId,
+        },
+      });
+
+      // B. UPDATE STATUS INVOICE (PENTING: Agar tagihan hilang dari list 'Unpaid' orang tua)
+      if (pay.invoiceId) {
+        await tx.invoice.update({
+          where: { id: pay.invoiceId },
+          data: { status: "PAID" },
+        });
+      }
+
+      // C. LOGIC UPDATE SESI SISWA
+      const sessionBoostingCategories = [
+        "RENEWAL",
+        "REGISTRATION",
+        "REACTIVATION",
+        "KURSUS",
+      ];
+      const updateReports: any[] = [];
+
+      if (sessionBoostingCategories.includes(pay.category || "")) {
+        for (const student of pay.students) {
+          // Hitung Sesi dari Paket Utama
+          const sessionsEarned = student.package?.sesiCredit || 0;
+
+          // Hitung Sesi dari Addons
+          const addOnSessionsEarned = student.addons.reduce(
+            (sum, addon) => sum + (addon.sesiCredit || 0),
+            0,
+          );
+
+          if (sessionsEarned > 0 || addOnSessionsEarned > 0) {
+            const updatedStudent = await tx.student.update({
+              where: { id: student.id },
+              data: {
+                remainingSesi: { increment: sessionsEarned },
+                addOnSesi: { increment: addOnSessionsEarned },
+                status: "ACTIVE",
+              },
+            });
+
+            updateReports.push({
+              fullName: student.fullName,
+              parentName: student.parentName,
+              parentContact: student.parentContact,
+              sessionsEarned,
+              addOnSessionsEarned,
+              newTotalSesi: updatedStudent.remainingSesi,
+              newAddOnSesi: updatedStudent.addOnSesi,
+            });
+          }
+        }
+      }
+
+      return { pay, updateReports };
+    });
+
+    // 2. NOTIFIKASI WHATSAPP (Grouping by Parent Contact)
+    const reportsByContact = result.updateReports.reduce(
+      (acc: any, curr: any) => {
+        if (!acc[curr.parentContact]) acc[curr.parentContact] = [];
+        acc[curr.parentContact].push(curr);
+        return acc;
+      },
+      {},
+    );
+
+    for (const contact in reportsByContact) {
+      const children = reportsByContact[contact];
+      const parentName = children[0].parentName;
+
+      const sessionDetails = children
+        .map((c: any) => {
+          let detail = `• *${c.fullName}*:\n`;
+          detail += `   - Paket: +${c.sessionsEarned} (Total: ${c.newTotalSesi})`;
+          if (c.addOnSessionsEarned > 0) {
+            detail += `\n   - Add-on: +${c.addOnSessionsEarned} (Total: ${c.newAddOnSesi})`;
+          }
+          return detail;
+        })
+        .join("\n\n");
+
+      // Link Invoice untuk Orang Tua agar mereka bisa lihat kuitansi digitalnya langsung
+      const invoiceLink = `${process.env.NEXT_PUBLIC_BASE_URL}/parent/invoice/${encodeURIComponent(parentName)}`;
+
+      const message =
+        `*✅ PEMBAYARAN TERVERIFIKASI*\n\n` +
+        `Halo Ayah/Bunda *${parentName}*,\n` +
+        `Pembayaran tagihan telah kami terima dan diverifikasi. Sesi belajar telah ditambahkan ke akun Ananda. 🙏\n\n` +
+        `*RINCIAN TRANSAKSI:*\n` +
+        `• Kategori: ${result.pay.category}\n` +
+        `• Nominal: Rp ${result.pay.amount.toLocaleString("id-ID")}\n` +
+        `--------------------------------\n` +
+        `*UPDATE SESI BELAJAR:*\n\n` +
+        `${sessionDetails}\n` +
+        `--------------------------------\n` +
+        `*LIHAT KUITANSI DIGITAL:*\n` +
+        `${invoiceLink}\n\n` +
+        `Selamat belajar! ✨`;
+
+      try {
+        await sendFonneNotification(contact, message);
+      } catch (waError) {
+        console.error(`Gagal mengirim WA ke ${contact}:`, waError);
+      }
+    }
+
+    // 3. REVALIDASI DATA
+    revalidatePath("/admin/payment", "layout");
+    revalidatePath("/invoice", "layout"); // Update dashboard invoice admin
+
+    // Revalidate halaman invoice masing-masing orang tua
+    result.updateReports.forEach((r: any) => {
+      revalidatePath(`/parent/invoice/${encodeURIComponent(r.parentName)}`);
+    });
+
+    return { success: true, message: "Verifikasi & Update Invoice Berhasil!" };
+  } catch (error: any) {
+    console.error("Confirm Payment Error:", error);
+    return { success: false, message: error.message || "Gagal verifikasi" };
+  }
+}
